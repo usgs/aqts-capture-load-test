@@ -53,7 +53,10 @@ def restore_db_cluster(event, context):
         DBClusterSnapshotIdentifier=snapshot_identifier
     )
     if response.get('DbClusterSnapshots') is None:
-        return
+        return {
+            'statusCode': 200,
+            'message': f"DbCluster already exists, skipping {response}"
+        }
 
     response = client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=db_cluster_identifier,
@@ -70,5 +73,8 @@ def restore_db_cluster(event, context):
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False
-
     )
+    return {
+        'statusCode': 201,
+        'message': f"Db cluster should be created {response}"
+    }
