@@ -19,7 +19,8 @@ def restore_db_cluster(event, context):
         # SnapshotIdentifier='nwcapture-prod-external-final',
         SnapshotIdentifier='nwcapture-test-20200611',
         Engine='aurora-postgresql',
-        EngineVersion='11.7',
+        # TODO we need a snapshot taken from 11.x
+        EngineVersion='10.7',
         Port=5477,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
