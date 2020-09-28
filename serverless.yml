@@ -51,14 +51,6 @@ stepFunctions:
         includeExecutionData: true
         destinations:
           - arn:aws:logs:${self:provider.region}:${self:custom.accountNumber}:log-group:step-functions-test:*
-      alarms:
-        topics:
-          alarm:
-            Ref: snsTopic
-        metrics:
-          - executionsFailed
-          - executionThrottled
-        treatMissingData: missing
       role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
