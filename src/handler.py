@@ -16,11 +16,9 @@ def restore_db_cluster(event, context):
         #    'string',
         # ],
         DBClusterIdentifier='nwcapture-load',
-        # SnapshotIdentifier='nwcapture-prod-external-final',
-        SnapshotIdentifier='nwcapture-test-20200611',
+        SnapshotIdentifier='rds:nwcapture-qa-2020-09-27-06-15',
         Engine='aurora-postgresql',
-        # TODO update to 11.7 when we have an 11.7 snapshot
-        EngineVersion='10.7',
+        EngineVersion='11.7',
         Port=5477,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
@@ -40,9 +38,7 @@ def restore_db_cluster(event, context):
         #    'string',
         # ],
         EngineMode='provisioned',
-        # TODO use aqts-capture when we have an 11.7 snapshot
-        # DBClusterParameterGroupName='aqts-capture',
-        DBClusterParameterGroupName='iow-aurora-postgresql10',
+        DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False
         # Domain='string',
