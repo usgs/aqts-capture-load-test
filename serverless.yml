@@ -56,7 +56,6 @@ resources:
 stepFunctions:
   stateMachines:
     aqtsLoadTest:
-      type: STANDARD
       loggingConfig:
         level: ALL
         includeExecutionData: true
@@ -70,7 +69,8 @@ stepFunctions:
         States:
           RestoreDbCluster:
             Type: Task
-            Resource: arn:aws:lambda:${self:provider.region}:${self:custom.accountNumber}:function:${self:service}-${opt:stage}-restoreDbCluster
+            Resource:
+              Fn::GetAtt: [restoreDbCluster, Arn]
             Next: WaitForDbClusterToSetup
           WaitForDbClusterToSetup:
             Type: Wait
@@ -78,7 +78,8 @@ stepFunctions:
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
-            Resource: arn:aws:lambda:${self:provider.region}:${self:custom.accountNumber}:function:${self:service}-${opt:stage}-deleteDbCluster
+            Resource:
+              Fn::GetAtt: [deleteDbCluster, Arn]
             End: true
 
 plugins:
