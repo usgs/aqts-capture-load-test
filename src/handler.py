@@ -32,7 +32,8 @@ def restore_db_cluster(event, context):
         #        'Value': 'string'
         #    },
         # ],
-        KmsKeyId='WMA-TEST',
+        # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
+        #KmsKeyId='WMA-TEST',
         EnableIAMDatabaseAuthentication=True,
         # EnableCloudwatchLogsExports=[
         #    'string',
