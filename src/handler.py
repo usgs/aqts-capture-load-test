@@ -1,6 +1,10 @@
 import os
 import boto3
+import logging
 
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 def delete_db_cluster(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -48,6 +52,7 @@ def restore_db_cluster(event, context):
         DBClusterIdentifier=db_cluster_identifier,
         DBClusterSnapshotIdentifier=snapshot_identifier
     )
+    logger.debug(f"aqts-capture-load-test restoreDbCluster describeDbClusterSnapshot response={response}");
     if len(response['DbClusterSnapshots']) > 0:
         return
 
