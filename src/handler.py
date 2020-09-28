@@ -52,8 +52,9 @@ def restore_db_cluster(event, context):
         DBClusterIdentifier=db_cluster_identifier,
         DBClusterSnapshotIdentifier=snapshot_identifier
     )
-    logger.debug(f"aqts-capture-load-test restoreDbCluster describeDbClusterSnapshot response={response}");
-    if len(response['DbClusterSnapshots']) > 0:
+    logger.debug(f"aqts-capture-load-test is response a string " + type(response))
+    logger.debug(f"aqts-capture-load-test restoreDbCluster describeDbClusterSnapshot response={response.get('DbClusterSnapshots')}");
+    if len(response.get('DbClusterSnapshots')) > 0:
         return
 
     response = client.restore_db_cluster_from_snapshot(
