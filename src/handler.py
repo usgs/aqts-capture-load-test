@@ -32,7 +32,7 @@ def restore_db_cluster(event, context):
         #        'Value': 'string'
         #    },
         # ],
-        KmsKeyId='WMA-TEST',
+        KmsKeyId=os.environ['KMS_KEY'],
         EnableIAMDatabaseAuthentication=True,
         # EnableCloudwatchLogsExports=[
         #    'string',

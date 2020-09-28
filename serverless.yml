@@ -31,6 +31,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      KMS_KEY: arn:aws:kms:{$self:provider.region}:{$self:custom.accountNumber}:key/f8a633c0-9eb3-42b4-9956-b3e219f8fe05
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
