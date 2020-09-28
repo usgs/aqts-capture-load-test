@@ -42,11 +42,22 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+resources:
+  Resources:
+    myBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: iow-retriever-capture-load
 
 stepFunctions:
   stateMachines:
     aqtsLoadTest:
       type: EXPRESS
+      loggingConfig:
+        level: ALL
+        includeExecutionData: true
+        destinations:
+          - arn:aws:logs:${self:provider.region}:${self:custom.accountNumber}:log-group:step-functions-load-test:*
       role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
