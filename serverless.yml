@@ -42,8 +42,25 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+stepFunctions:
+  stateMachines:
+    aqtsLoadTest:
+      definition:
+        Comment: "AQTS Load Test"
+        StartAt: RestoreDbCluster
+        States:
+          RestoreDbCluster:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-restoreDbCluster"
+            Next: DeleteDbCluster
+          DeleteDbCluster:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-deleteDbCluster"
+            End: true
+
 plugins:
   - serverless-plugin-git-variables
+  - serverless-step-functions
   - serverless-python-requirements
 
 package:

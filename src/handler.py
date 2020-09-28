@@ -1,6 +1,7 @@
 import os
 import boto3
 
+
 def delete_db_cluster(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
     response = client.delete_db_cluster(
@@ -33,7 +34,7 @@ def restore_db_cluster(event, context):
         #    },
         # ],
         # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
-        #KmsKeyId='WMA-TEST',
+        # KmsKeyId='WMA-TEST',
         EnableIAMDatabaseAuthentication=True,
         # EnableCloudwatchLogsExports=[
         #    'string',
