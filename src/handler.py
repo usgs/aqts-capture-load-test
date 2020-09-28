@@ -42,7 +42,7 @@ def restore_db_cluster(event, context):
         EngineMode='provisioned',
         # TODO use aqts-capture when we have an 11.7 snapshot
         # DBClusterParameterGroupName='aqts-capture',
-        DBClusterParameterGroupName='aqtstest',
+        DBClusterParameterGroupName='iow-aurora-postgresql10',
         DeletionProtection=False,
         CopyTagsToSnapshot=False
         # Domain='string',
