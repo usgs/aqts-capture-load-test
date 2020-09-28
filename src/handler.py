@@ -11,38 +11,60 @@ def delete_db_cluster(event, context):
 
 
 def restore_db_cluster(event, context):
+    db_cluster_identifier = 'nwcapture-load';
+    snapshot_identifier = 'rds:nwcapture-qa-2020-09-27-06-15'
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.restore_db_cluster_from_snapshot(
-        # AvailabilityZones=[
-        #    'string',
-        # ],
-        DBClusterIdentifier='nwcapture-load',
-        SnapshotIdentifier='rds:nwcapture-qa-2020-09-27-06-15',
-        Engine='aurora-postgresql',
-        EngineVersion='11.7',
-        Port=5477,
-        DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
-        DatabaseName='nwcapture-load',
-        # OptionGroupName='string',
-        # VpcSecurityGroupIds=[
-        #    'string',
-        # ],
-        # Tags=[
-        #    {
-        #        'Key': 'string',
-        #        'Value': 'string'
-        #    },
-        # ],
-        # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
-        # KmsKeyId='WMA-TEST',
-        EnableIAMDatabaseAuthentication=True,
-        # EnableCloudwatchLogsExports=[
-        #    'string',
-        # ],
-        EngineMode='provisioned',
-        DBClusterParameterGroupName='aqts-capture',
-        DeletionProtection=False,
-        CopyTagsToSnapshot=False
-        # Domain='string',
-        # DomainIAMRoleName='string'
+
+    # {
+    #     'Marker': 'string',
+    #     'DBClusterSnapshots': [
+    #         {
+    #             'AvailabilityZones': [
+    #                 'string',
+    #             ],
+    #             'DBClusterSnapshotIdentifier': 'string',
+    #             'DBClusterIdentifier': 'string',
+    #             'SnapshotCreateTime': datetime(2015, 1, 1),
+    #             'Engine': 'string',
+    #             'AllocatedStorage': 123,
+    #             'Status': 'string',
+    #             'Port': 123,
+    #             'VpcId': 'string',
+    #             'ClusterCreateTime': datetime(2015, 1, 1),
+    #             'MasterUsername': 'string',
+    #             'EngineVersion': 'string',
+    #             'LicenseModel': 'string',
+    #             'SnapshotType': 'string',
+    #             'PercentProgress': 123,
+    #             'StorageEncrypted': True | False,
+    #             'KmsKeyId': 'string',
+    #             'DBClusterSnapshotArn': 'string',
+    #             'SourceDBClusterSnapshotArn': 'string',
+    #             'IAMDatabaseAuthenticationEnabled': True | False
+    #         },
+    #     ]
+    # }
+    response = client.describe_db_cluster_snapshots(
+        DBClusterIdentifier=db_cluster_identifier,
+        DBClusterSnapshotIdentifier=snapshot_identifier
     )
+    if len(response['DbClusterSnapshots']) > 0:
+        return
+
+    response = client.restore_db_cluster_from_snapshot(
+    DBClusterIdentifier = db_cluster_identifier,
+    SnapshotIdentifier = snapshot_identifier,
+    Engine = 'aurora-postgresql',
+    EngineVersion = '11.7',
+    Port = 5477,
+    DBSubnetGroupName = 'nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
+    DatabaseName = 'nwcapture-load',
+    # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
+    # KmsKeyId='WMA-TEST',
+    EnableIAMDatabaseAuthentication = True,
+    EngineMode = 'provisioned',
+    DBClusterParameterGroupName = 'aqts-capture',
+    DeletionProtection = False,
+    CopyTagsToSnapshot = False
+
+)
