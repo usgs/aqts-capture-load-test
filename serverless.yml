@@ -50,7 +50,7 @@ stepFunctions:
         level: ALL
         includeExecutionData: true
         destinations:
-          - arn:aws:logs:${self:provider.region}:${self:custom.accountNumber}:log-group:step-functions-${self:custom.tier.${self:provider.stage}.lower}:*
+          - arn:aws:logs:${self:provider.region}:${self:custom.accountNumber}:log-group:step-functions-test:*
       alarms:
         topics:
           alarm:
