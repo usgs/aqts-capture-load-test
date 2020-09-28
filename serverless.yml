@@ -26,7 +26,7 @@ custom:
     subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
 
 functions:
-  RestoreDbCluster:
+  restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
@@ -34,7 +34,7 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  DeleteDbCluster:
+  deleteDbCluster:
     handler: src.handler.delete_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
@@ -70,11 +70,11 @@ stepFunctions:
         States:
           RestoreDbCluster:
             Type: Task
-            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-restoreDbCluster"
+            Resource: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-restoreDbCluster
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
-            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-deleteDbCluster"
+            Resource: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-deleteDbCluster
             End: true
 
 plugins:
