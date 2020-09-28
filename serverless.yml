@@ -42,6 +42,7 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+
 stepFunctions:
   stateMachines:
     aqtsLoadTest:
@@ -51,7 +52,6 @@ stepFunctions:
       definition:
         Comment: "AQTS Load Test"
         StartAt: RestoreDbCluster
-        role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
         States:
           RestoreDbCluster:
             Type: Task
