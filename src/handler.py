@@ -21,7 +21,7 @@ def restore_db_cluster(event, context):
         Engine='aurora-postgresql',
         EngineVersion='11.7',
         Port=5477,
-        # DBSubnetGroupName='string',
+        DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
         # OptionGroupName='string',
         # VpcSecurityGroupIds=[
