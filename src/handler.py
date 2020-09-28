@@ -2,9 +2,9 @@ import os
 import boto3
 import logging
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+
 
 def delete_db_cluster(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -57,19 +57,19 @@ def restore_db_cluster(event, context):
         return
 
     response = client.restore_db_cluster_from_snapshot(
-    DBClusterIdentifier = db_cluster_identifier,
-    SnapshotIdentifier = snapshot_identifier,
-    Engine = 'aurora-postgresql',
-    EngineVersion = '11.7',
-    Port = 5477,
-    DBSubnetGroupName = 'nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
-    DatabaseName = 'nwcapture-load',
-    # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
-    # KmsKeyId='WMA-TEST',
-    EnableIAMDatabaseAuthentication = True,
-    EngineMode = 'provisioned',
-    DBClusterParameterGroupName = 'aqts-capture',
-    DeletionProtection = False,
-    CopyTagsToSnapshot = False
+        DBClusterIdentifier=db_cluster_identifier,
+        SnapshotIdentifier=snapshot_identifier,
+        Engine='aurora-postgresql',
+        EngineVersion='11.7',
+        Port=5477,
+        DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
+        DatabaseName='nwcapture-load',
+        # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
+        # KmsKeyId='WMA-TEST',
+        EnableIAMDatabaseAuthentication=True,
+        EngineMode='provisioned',
+        DBClusterParameterGroupName='aqts-capture',
+        DeletionProtection=False,
+        CopyTagsToSnapshot=False
 
-)
+    )
