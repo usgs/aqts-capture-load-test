@@ -1,0 +1,56 @@
+service: aqts-capture-load-test
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-west-2'}
+  stage: ${opt:stage, 'TEST'}
+  runtime: python3.8
+  memorySize: 128
+  timeout: 45
+  logRetentionInDays: 90
+  deploymentBucket:
+    name: iow-cloud-applications
+  stackTags:
+    "wma:applicationId": "Aquarius TS Capture Load Test"
+    "wma:contact": "Kenneth Kehl kkehl@contractor.usgs.gov"
+    "wma:environment": ${self:provider.stage}
+    "wma:taggingVersion": 0.0.1
+    "wma:costCenter": TBD
+    commitIdentifier: ${git:sha1}
+
+custom:
+  exportGitVariables: false
+  accountNumber: ${ssm:/iow/aws/accountNumber}
+  vpc:
+    securityGroupIds: ${ssm:/iow/retriever-capture/${self:provider.stage}/securityGroupIds~split}
+    subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
+
+functions:
+  RestoreDbCluster:
+    handler: src.handler.restore_db_cluster
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  DeleteDbCluster:
+    handler: src.handler.delete_db_cluster
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+plugins:
+  - serverless-plugin-git-variables
+  - serverless-python-requirements
+
+package:
+  exclude:
+    - node_modules/**
+    - Dockerfile
+    - .dockerignore
+    - Jenkinsfile
+    - package.json
+    - package-lock.json
