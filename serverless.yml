@@ -70,15 +70,15 @@ stepFunctions:
         States:
           RestoreDbCluster:
             Type: Task
-            Resource: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-restoreDbCluster
-            Next: DeleteDbCluster
+            Resource: arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-restoreDbCluster
+            Next: WaitForDbClusterToSetup
           WaitForDbClusterToSetup:
             Type: Wait
             Seconds: 2400
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
-            Resource: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-deleteDbCluster
+            Resource: arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-${opt:stage}-deleteDbCluster
             End: true
 
 plugins:
