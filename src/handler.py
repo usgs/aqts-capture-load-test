@@ -39,8 +39,12 @@ def create_db_instance(event, context):
 
 
 def copy_s3(event, context):
-    # TODO copy from iow-retriever-capture-reference to iow-retriever-capture-load
-    pass
+    s3 = boto3.resource('s3')
+    src_bucket = s3.Bucket('iow-retriever-capture-reference')
+    dest_bucket = s3.Bucket('iow-retriever-capture-load')
+    dest_bucket.objects.all().delete()  # this is optional clean bucket
+    for obj in src_bucket.objects.all():
+        s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
 
 
 def restore_db_cluster(event, context):

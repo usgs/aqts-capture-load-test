@@ -89,7 +89,7 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: RestoreDbCluster
+        StartAt: CopyS3
         States:
           CopyS3:
             Type: Task
