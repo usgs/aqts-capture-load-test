@@ -19,6 +19,12 @@ def delete_db_cluster(event, context):
         SkipFinalSnapshot=True
     )
 
+def delete_db_instance(event, context):
+    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
+    response = client.delete_db_instance(
+        DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
+        SkipFinalSnapshot=True
+    )
 
 def create_db_instance(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -45,7 +51,10 @@ def restore_db_cluster(event, context):
         EngineMode='provisioned',
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
-        CopyTagsToSnapshot=False
+        CopyTagsToSnapshot=False,
+        VpcSecurityGroupIds=[
+            'vpc-1418c16d',
+        ],
     )
     # TODO handle errors
     return {

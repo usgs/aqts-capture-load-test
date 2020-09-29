@@ -42,6 +42,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  deleteDbInstance:
+    handler: src.handler.delete_db_instance
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   deleteDbCluster:
     handler: src.handler.delete_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -92,6 +100,15 @@ stepFunctions:
           WaitCreate:
             Type: Wait
             Seconds: 900
+            Next: DeleteDbInstance
+          DeleteDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ deleteDbInstance, Arn ]
+            End: true
+          WaitDeleteDbInstance:
+            Type: Wait
+            Seconds: 60
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
