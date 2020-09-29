@@ -26,6 +26,14 @@ custom:
     subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
 
 functions:
+  copyS3:
+    handler: src.handler.copy_s3
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -83,6 +91,11 @@ stepFunctions:
         Comment: "AQTS Load Test"
         StartAt: RestoreDbCluster
         States:
+          CopyS3:
+            Type: Task
+            Resource:
+              Fn::GetAtt [copyS3, Arn]
+            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:

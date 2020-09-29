@@ -19,12 +19,14 @@ def delete_db_cluster(event, context):
         SkipFinalSnapshot=True
     )
 
+
 def delete_db_instance(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
     response = client.delete_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         SkipFinalSnapshot=True
     )
+
 
 def create_db_instance(event, context):
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -34,6 +36,11 @@ def create_db_instance(event, context):
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         Engine=ENGINE
     )
+
+
+def copy_s3(event, context):
+    # TODO copy from iow-retriever-capture-reference to iow-retriever-capture-load
+    pass
 
 
 def restore_db_cluster(event, context):
@@ -53,7 +60,7 @@ def restore_db_cluster(event, context):
         DeletionProtection=False,
         CopyTagsToSnapshot=False,
         VpcSecurityGroupIds=[
-            'vpc-1418c16d',
+            'Postgres-Security-Group-prod-owi-test',
         ],
     )
     # TODO handle errors
