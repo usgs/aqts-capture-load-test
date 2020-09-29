@@ -71,6 +71,10 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreDbCluster, Arn]
+            Next: WaitSeconds
+          WaitSeconds:
+            Type: Wait
+            Seconds: 30
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
