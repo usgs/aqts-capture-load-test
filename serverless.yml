@@ -110,6 +110,29 @@ stepFunctions:
             Type: Wait
             Seconds: 1200
             Next: DeleteDbInstance
+#          DisableTriggerReal:
+#            Type: Task
+#            Resource:
+#            Next:
+#          SetSecretsToFake:
+#            Type: Task
+#            Resource:
+#            Next:
+#          EnableTriggerFake:
+#            Type: Task
+#            Resource:
+#            Next:
+#          WaitForProcessing:
+#            Type: Wait
+#            Seconds: 3600
+#            Next:
+#          RunIntegrationTests:
+#            Type: Task
+#            Resource:
+#            Next:
+#          DisableTriggerFake:
+#          SetSecretsToReal:
+#          EnableTriggerReal:
           DeleteDbInstance:
             Type: Task
             Resource:

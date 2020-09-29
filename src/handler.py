@@ -72,7 +72,7 @@ def restore_db_cluster(event, context):
         DeletionProtection=False,
         CopyTagsToSnapshot=False,
         VpcSecurityGroupIds=[
-            'Postgres-Security-Group-prod-owi-test',
+            'sg-d0d1feaf',
         ],
     )
     return {
