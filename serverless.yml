@@ -65,17 +65,8 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: DeleteDbClusterPre
+        StartAt: RestoreDbCluster
         States:
-          DeleteDbClusterPre:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [deleteDbCluster, Arn]
-            Next: WaitForDbClusterDeletePre
-          WaitForDbClusterDeletePre:
-            Type: Wait
-            Seconds: 90
-            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:
