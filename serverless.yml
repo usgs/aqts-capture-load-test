@@ -105,7 +105,7 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [ deleteDbInstance, Arn ]
-            End: true
+            Next: WaitDeleteDbInstance
           WaitDeleteDbInstance:
             Type: Wait
             Seconds: 60
