@@ -72,6 +72,19 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: iow-retriever-capture-load
+      BucketPolicyFakeTriggerBucket:
+        Type: 'AWS::S3::BucketPolicy'
+        Properties:
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Principal: '*'
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: arn:aws:s3:::iow-retriever-capture-load/*
+          Bucket:
+            Ref: FakeTriggerBucket
     ReferenceFileBucket:
       Type: AWS::S3::Bucket
       Properties:
