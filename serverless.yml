@@ -107,7 +107,7 @@ stepFunctions:
             Next: WaitRestore
           WaitRestore:
             Type: Wait
-            Seconds: 900
+            Seconds: 1200
             Next: ModifyDbCluster
           ModifyDbCluster:
             Type: Task
