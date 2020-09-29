@@ -28,6 +28,23 @@ def delete_db_cluster(event, context):
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SkipFinalSnapshot=True
     )
+    return {
+        'statusCode': 200,
+        'message': f"Db cluster should be deleted {response}"
+    }
+
+
+def modify_db_cluster(event, context):
+    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
+    response = client.modify_db_cluster(
+        DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
+        ApplyImmediately=True,
+        MasterUserPassword='Password123'
+    )
+    return {
+        'statusCode': 200,
+        'message': f"Db cluster should be modified {response}"
+    }
 
 
 def delete_db_instance(event, context):
@@ -36,6 +53,10 @@ def delete_db_instance(event, context):
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         SkipFinalSnapshot=True
     )
+    return {
+        'statusCode': 200,
+        'message': f"Db cluster should be deleted {response}"
+    }
 
 
 def create_db_instance(event, context):
@@ -46,6 +67,10 @@ def create_db_instance(event, context):
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         Engine=ENGINE
     )
+    return {
+        'statusCode': 201,
+        'message': f"Db instance should be created {response}"
+    }
 
 
 def copy_s3(event, context):

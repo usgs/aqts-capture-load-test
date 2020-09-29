@@ -42,6 +42,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  modifyDbCluster:
+    handler: src.handler.modify_db_cluster
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   createDbInstance:
     handler: src.handler.create_db_instance
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -100,6 +108,11 @@ stepFunctions:
           WaitRestore:
             Type: Wait
             Seconds: 900
+            Next: ModifyDbCluster
+          ModifyDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [modifyDbCluster, Arn]
             Next: CreateDbInstance
           CreateDbInstance:
             Type: Task
