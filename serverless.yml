@@ -99,7 +99,7 @@ stepFunctions:
             Next: WaitCreate
           WaitCreate:
             Type: Wait
-            Seconds: 900
+            Seconds: 1200
             Next: DeleteDbInstance
           DeleteDbInstance:
             Type: Task
@@ -108,7 +108,7 @@ stepFunctions:
             Next: WaitDeleteDbInstance
           WaitDeleteDbInstance:
             Type: Wait
-            Seconds: 60
+            Seconds: 600
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
