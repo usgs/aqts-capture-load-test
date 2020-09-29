@@ -71,10 +71,6 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreDbCluster, Arn]
-            Next: WaitForDbClusterToSetup
-          WaitForDbClusterToSetup:
-            Type: Wait
-            Seconds: 900
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
