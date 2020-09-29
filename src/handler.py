@@ -9,6 +9,7 @@ DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 SNAPSHOT_IDENTIFIER = 'rds:nwcapture-qa-2020-09-27-06-15'
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
+ENGINE = 'aurora-postgresql'
 
 
 def delete_db_cluster(event, context):
@@ -24,7 +25,8 @@ def create_db_instance(event, context):
     response = client.create_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
-        DBClusterIdentifier=DB_CLUSTER_IDENTIFIER
+        DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
+        Engine=ENGINE
     )
 
 
@@ -34,7 +36,7 @@ def restore_db_cluster(event, context):
     response = client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SnapshotIdentifier=SNAPSHOT_IDENTIFIER,
-        Engine='aurora-postgresql',
+        Engine=ENGINE,
         EngineVersion='11.7',
         Port=5477,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
