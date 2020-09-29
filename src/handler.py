@@ -19,45 +19,6 @@ def restore_db_cluster(event, context):
     snapshot_identifier = 'rds:nwcapture-qa-2020-09-27-06-15'
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 
-    # {
-    #     'Marker': 'string',
-    #     'DBClusterSnapshots': [
-    #         {
-    #             'AvailabilityZones': [
-    #                 'string',
-    #             ],
-    #             'DBClusterSnapshotIdentifier': 'string',
-    #             'DBClusterIdentifier': 'string',
-    #             'SnapshotCreateTime': datetime(2015, 1, 1),
-    #             'Engine': 'string',
-    #             'AllocatedStorage': 123,
-    #             'Status': 'string',
-    #             'Port': 123,
-    #             'VpcId': 'string',
-    #             'ClusterCreateTime': datetime(2015, 1, 1),
-    #             'MasterUsername': 'string',
-    #             'EngineVersion': 'string',
-    #             'LicenseModel': 'string',
-    #             'SnapshotType': 'string',
-    #             'PercentProgress': 123,
-    #             'StorageEncrypted': True | False,
-    #             'KmsKeyId': 'string',
-    #             'DBClusterSnapshotArn': 'string',
-    #             'SourceDBClusterSnapshotArn': 'string',
-    #             'IAMDatabaseAuthenticationEnabled': True | False
-    #         },
-    #     ]
-    # }
-    response = client.describe_db_cluster_snapshots(
-        DBClusterIdentifier=db_cluster_identifier,
-        DBClusterSnapshotIdentifier=snapshot_identifier
-    )
-    if response.get('DbClusterSnapshots') is None:
-        return {
-            'statusCode': 200,
-            'message': f"DbCluster already exists, skipping {response}"
-        }
-
     response = client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=db_cluster_identifier,
         SnapshotIdentifier=snapshot_identifier,
@@ -66,14 +27,13 @@ def restore_db_cluster(event, context):
         Port=5477,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
-        # TODO 'WMA-TEST' -- doesnt exist or dont have permission?
-        # KmsKeyId='WMA-TEST',
         EnableIAMDatabaseAuthentication=True,
         EngineMode='provisioned',
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False
     )
+    # TODO handle errors
     return {
         'statusCode': 201,
         'message': f"Db cluster should be created {response}"

@@ -67,6 +67,15 @@ stepFunctions:
         Comment: "AQTS Load Test"
         StartAt: RestoreDbCluster
         States:
+          DeleteDbClusterPre:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [deleteDbCluster, Arn]
+            Next: WaitForDbClusterDeletePre
+          WaitForDbClusterDeletePre:
+            Type: Wait
+            Seconds: 90
+            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:
@@ -74,7 +83,7 @@ stepFunctions:
             Next: WaitForDbClusterToSetup
           WaitForDbClusterToSetup:
             Type: Wait
-            Seconds: 2400
+            Seconds: 900
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
