@@ -94,7 +94,7 @@ stepFunctions:
           CopyS3:
             Type: Task
             Resource:
-              Fn::GetAtt [copyS3, Arn]
+              Fn::GetAtt: [copyS3, Arn]
             Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
