@@ -9,10 +9,10 @@ two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 
-month = two_days_ago.month
+month = str(two_days_ago.month)
 if len(month) == 1:
     month = f"0{month}"
-day = two_days_ago.day
+day = str(two_days_ago.day)
 if len(day) == 1:
     day = f"0{day}"
 
