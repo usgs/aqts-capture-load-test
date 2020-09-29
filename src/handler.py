@@ -9,7 +9,7 @@ two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 
-SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{two_days_ago.month}-{two_days_ago.day}-10-8"
+SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{two_days_ago.month}-{two_days_ago.day}-10-08"
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
