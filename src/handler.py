@@ -1,12 +1,15 @@
 import os
 import boto3
+import datetime
 import logging
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
-SNAPSHOT_IDENTIFIER = 'rds:nwcapture-qa-2020-09-27-06-15'
+
+SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{two_days_ago.month}-{two_days_ago.day}-10-8"
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
@@ -34,6 +37,8 @@ def create_db_instance(event, context):
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
+        MasterUsername='capture_owner',
+        MasterUserPassword='FooDog123',
         Engine=ENGINE
     )
 
@@ -57,6 +62,8 @@ def copy_s3(event, context):
 
 
 def restore_db_cluster(event, context):
+    logger.debug(f"SNAPSHOT_IDENTIFIER: {SNAPSHOT_IDENTIFIER}")
+
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
     response = client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
