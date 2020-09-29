@@ -44,8 +44,6 @@ def create_db_instance(event, context):
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
-        MasterUsername='capture_owner',
-        MasterUserPassword='FooDog123',
         Engine=ENGINE
     )
 
