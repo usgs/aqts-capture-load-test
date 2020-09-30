@@ -104,12 +104,11 @@ def restore_db_cluster(event, context):
         Port=5477,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
-        EnableIAMDatabaseAuthentication=True,
+        EnableIAMDatabaseAuthentication=False,
         EngineMode='provisioned',
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False,
-        EnableIAMDatabaseAuthentication=False,
         KmsKeyId='7654bdeb-56cd-4826-8e79-f9b8f9a53209',
         VpcSecurityGroupIds=[
             'sg-d0d1feaf',
