@@ -199,6 +199,7 @@ plugins:
   - serverless-plugin-git-variables
   - serverless-step-functions
   - serverless-python-requirements
+  - serverless-pseudo-parameters
 
 package:
   exclude:
