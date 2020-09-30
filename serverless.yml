@@ -20,7 +20,6 @@ provider:
 
 custom:
   exportGitVariables: false
-  accountNumber: ${ssm:/iow/aws/accountNumber}
   vpc:
     securityGroupIds: ${ssm:/iow/retriever-capture/${self:provider.stage}/securityGroupIds~split}
     subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
@@ -28,7 +27,7 @@ custom:
 functions:
   copyS3:
     handler: src.handler.copy_s3
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -36,7 +35,7 @@ functions:
 
   copyS3Temp:
     handler: src.handler.copy_s3_temp
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -44,7 +43,7 @@ functions:
 
   restoreDbCluster:
     handler: src.handler.restore_db_cluster
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -52,7 +51,7 @@ functions:
 
   modifyDbCluster:
     handler: src.handler.modify_db_cluster
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -60,7 +59,7 @@ functions:
 
   createDbInstance:
     handler: src.handler.create_db_instance
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -68,7 +67,7 @@ functions:
 
   deleteDbInstance:
     handler: src.handler.delete_db_instance
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -76,7 +75,7 @@ functions:
 
   deleteDbCluster:
     handler: src.handler.delete_db_cluster
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
@@ -114,8 +113,8 @@ stepFunctions:
         level: ALL
         includeExecutionData: true
         destinations:
-          - arn:aws:logs:${self:provider.region}:${self:custom.accountNumber}:log-group:step-functions-test:*
-      role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
+          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
+      role: arn:aws:iam::#{AWS::AccountId}:role/step-functions-service-access
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
