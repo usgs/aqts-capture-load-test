@@ -7,3 +7,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - New repository
+- Add the ability to restore aurora-postgresql snapshot from production to the test tier
