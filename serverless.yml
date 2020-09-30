@@ -8,15 +8,15 @@ provider:
   memorySize: 128
   timeout: 45
   logRetentionInDays: 90
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "s3:PutObject"
-      Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:s3:::"
-            - Ref: LoadTestBucket
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:PutObject"
+#      Resource:
+#        Fn::Join:
+#          - ""
+#          - - "arn:aws:s3:::"
+#            - Ref: LoadTestBucket
   deploymentBucket:
     name: iow-cloud-applications
   stackTags:
@@ -42,14 +42,6 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  copyS3Temp:
-    handler: src.handler.copy_s3_temp
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
   restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
@@ -60,6 +52,15 @@ functions:
 
   modifyDbCluster:
     handler: src.handler.modify_db_cluster
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+
+  deleteBucket:
+    handler: src.handler.delete_bucket
     role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -90,6 +91,50 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  falsifySecrets:
+    handler: src.handler.falsify_secrets
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  restoreSecrets:
+    handler: src.handler.restore_secrets
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  disableMainTrigger:
+    handler: src.handler.disable_main_trigger
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  enableMainTrigger:
+    handler: src.handler.enable_main_trigger
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  runIntegrationTests:
+    handler: src.handler.run_integration_tests
+    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+
+
+
+
 resources:
   Resources:
     ReferenceFileBucket:
@@ -111,17 +156,11 @@ stepFunctions:
         includeExecutionData: true
         destinations:
           - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
-      role: arn:aws:iam::#{AWS::AccountId}:role/step-functions-service-access
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: CopyS3
+        StartAt: RestoreDbCluster
         States:
-          CopyS3:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [copyS3, Arn]
-            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:
@@ -134,8 +173,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 20
+                IntervalSeconds: 900
+                MaxAttempts: 8
                 BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
@@ -145,52 +184,69 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 20
+                IntervalSeconds: 900
+                MaxAttempts: 8
                 BackoffRate: 1
+            Next: DisableMainTrigger
+          DisableMainTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ disableMainTrigger, Arn]
+            Next: FalsifySecrets
+          FalsifySecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ falsifySecrets, Arn ]
+            Next: CopyS3
+          CopyS3:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [copyS3, Arn]
+            Next: WaitForProcessing
+          WaitForProcessing:
+            Type: Wait
+            Seconds: 60
+            Next: RunIntegrationTests
+          RunIntegrationTests:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ runIntegrationTests, Arn ]
+            Next: WaitForTestResults
+          WaitForTestResults:
+            Type: Wait
+            Seconds: 60
+            Next: DeleteBucket
+          DeleteBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ deleteBucket, Arn ]
+              Next: RestoreSecrets
+          RestoreSecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ restoreSecrets, Arn ]
+              Next: EnableMainTrigger
+          EnableMainTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ enableMainTrigger, Arn ]
+              Next: DeleteDbInstance
+          DeleteDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ deleteDbInstance, Arn ]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 900
+                MaxAttempts: 8
+                BackoffRate: 1
+            Next: DeleteDbCluster
+          DeleteDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [deleteDbCluster, Arn]
             End: true
-
-#            Next: DeleteDbInstance
-#          DisableTriggerReal:
-#            Type: Task
-#            Resource:
-#            Next:
-#          SetSecretsToFake:
-#            Type: Task
-#            Resource:
-#            Next:
-#          EnableTriggerFake:
-#            Type: Task
-#            Resource:
-#            Next:
-#          WaitForProcessing:
-#            Type: Wait
-#            Seconds: 3600
-#            Next:
-#          RunIntegrationTests:
-#            Type: Task
-#            Resource:
-#            Next:
-#          DisableTriggerFake:
-#          SetSecretsToReal:
-#          EnableTriggerReal:
-
-#          DeleteDbInstance:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [ deleteDbInstance, Arn ]
-#            Retry:
-#              - ErrorEquals:
-#                  - States.ALL
-#                IntervalSeconds: 240
-#                MaxAttempts: 4
-#                BackoffRate: 2
-#            Next: DeleteDbCluster
-#          DeleteDbCluster:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [deleteDbCluster, Arn]
-#            End: true
 
 plugins:
   - serverless-plugin-git-variables
