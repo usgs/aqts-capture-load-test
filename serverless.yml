@@ -34,6 +34,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  copyS3Temp:
+    handler: src.handler.copy_s3_temp
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role

@@ -76,19 +76,37 @@ def create_db_instance(event, context):
 def copy_s3(event, context):
     # TODO modify aqts-capture-trigger to have a fake trigger bucket that works the same
     # as the real trigger bucket (name: aqts-retriever-capture-load)
-    pass
-    # s3 = boto3.resource('s3')
-    # src_bucket = s3.Bucket('iow-retriever-capture-reference')
-    # dest_bucket = s3.Bucket('iow-retriever-capture-load')
-    # dest_bucket.objects.all().delete()  # this is optional clean bucket
-    # count = 0
-    # for obj in src_bucket.objects.all():
-    #     s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
-    #     count = count + 1
-    # return {
-    #     'statusCode': 200,
-    #     'message': f"copy_s3 copied {count} objects"
-    # }
+
+    s3 = boto3.resource('s3')
+    src_bucket = s3.Bucket('iow-retriever-capture-reference')
+    dest_bucket = s3.Bucket('iow-retriever-capture-load')
+    dest_bucket.objects.all().delete()  # this is optional clean bucket
+    count = 0
+    for obj in src_bucket.objects.all():
+        s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
+        count = count + 1
+    return {
+        'statusCode': 200,
+        'message': f"copy_s3 copied {count} objects"
+    }
+
+
+def copy_s3_temp(event, context):
+    # TODO modify aqts-capture-trigger to have a fake trigger bucket that works the same
+    # as the real trigger bucket (name: aqts-retriever-capture-load)
+
+    s3 = boto3.resource('s3')
+    src_bucket = s3.Bucket('iow-retriever-capture-reference')
+    dest_bucket = s3.Bucket('iow-retriever-capture-load')
+    dest_bucket.objects.all().delete()  # this is optional clean bucket
+    count = 0
+    for obj in src_bucket.objects.all():
+        s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
+        count = count + 1
+    return {
+        'statusCode': 200,
+        'message': f"copy_s3 copied {count} objects"
+    }
 
 
 def restore_db_cluster(event, context):
