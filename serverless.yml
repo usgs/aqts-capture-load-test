@@ -8,15 +8,6 @@ provider:
   memorySize: 128
   timeout: 45
   logRetentionInDays: 90
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "s3:PutObject"
-      Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:s3:::"
-            - Ref: LoadTestBucket
   deploymentBucket:
     name: iow-cloud-applications
   stackTags:
