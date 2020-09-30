@@ -133,10 +133,10 @@ resources:
       Properties:
         BucketName: iow-retriever-capture-reference
     # See aqts-capture-trigger, need to hook this bucket up to sqs queue ...
-    LoadTestBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-load
+#    LoadTestBucket:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-load
 
 
 stepFunctions:
