@@ -112,9 +112,9 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 240
-                MaxAttempts: 4
-                BackoffRate: 2
+                IntervalSeconds: 300
+                MaxAttempts: 20
+                BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
             Type: Task
@@ -123,9 +123,9 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 240
-                MaxAttempts: 4
-                BackoffRate: 2
+                IntervalSeconds: 300
+                MaxAttempts: 20
+                BackoffRate: 1
             End: true
 
 #            Next: DeleteDbInstance
