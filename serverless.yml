@@ -34,30 +34,30 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  modifyDbCluster:
-    handler: src.handler.modify_db_cluster
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-  createDbInstance:
-    handler: src.handler.create_db_instance
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-  deleteDbInstance:
-    handler: src.handler.delete_db_instance
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
+#  modifyDbCluster:
+#    handler: src.handler.modify_db_cluster
+#    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  createDbInstance:
+#    handler: src.handler.create_db_instance
+#    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  deleteDbInstance:
+#    handler: src.handler.delete_db_instance
+#    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
   deleteDbCluster:
     handler: src.handler.delete_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -65,6 +65,27 @@ functions:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #  copyS3:
 #    handler: src.handler.copy_s3
@@ -136,46 +157,56 @@ functions:
 #        BucketName: iow-retriever-capture-load
 
 
-stepFunctions:
-  stateMachines:
-    aqtsLoadTest:
-      loggingConfig:
-        level: ALL
-        includeExecutionData: true
-        destinations:
-          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
-      name: aqts-capture-load-test-${self:provider.stage}
-      definition:
-        Comment: "AQTS Load Test"
-        StartAt: RestoreDbCluster
-        States:
-          RestoreDbCluster:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [restoreDbCluster, Arn]
-            Next: ModifyDbCluster
-          ModifyDbCluster:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [modifyDbCluster, Arn]
-            Retry:
-              - ErrorEquals:
-                  - States.ALL
-                IntervalSeconds: 600
-                MaxAttempts: 10
-                BackoffRate: 1
-            Next: CreateDbInstance
-          CreateDbInstance:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [createDbInstance, Arn]
-            Retry:
-              - ErrorEquals:
-                  - States.ALL
-                IntervalSeconds: 600
-                MaxAttempts: 10
-                BackoffRate: 1
-            End: true
+#stepFunctions:
+#  stateMachines:
+#    aqtsLoadTest:
+#      loggingConfig:
+#        level: ALL
+#        includeExecutionData: true
+#        destinations:
+#          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
+#      name: aqts-capture-load-test-${self:provider.stage}
+#      definition:
+#        Comment: "AQTS Load Test"
+#        StartAt: RestoreDbCluster
+#        States:
+#          RestoreDbCluster:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [restoreDbCluster, Arn]
+#            Next: ModifyDbCluster
+#          ModifyDbCluster:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [modifyDbCluster, Arn]
+#            Retry:
+#              - ErrorEquals:
+#                  - States.ALL
+#                IntervalSeconds: 600
+#                MaxAttempts: 10
+#                BackoffRate: 1
+#            Next: CreateDbInstance
+#          CreateDbInstance:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [createDbInstance, Arn]
+#            Retry:
+#              - ErrorEquals:
+#                  - States.ALL
+#                IntervalSeconds: 600
+#                MaxAttempts: 10
+#                BackoffRate: 1
+#            End: true
+
+
+
+
+
+
+
+
+
+
 #            Next: DisableMainTrigger
 #          DisableMainTrigger:
 #            Type: Task
