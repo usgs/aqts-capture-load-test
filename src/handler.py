@@ -137,25 +137,25 @@ def restore_db_cluster(event, context):
     }
 
 
-def disable_main_trigger(event, context):
-    logger.debug(
-        "Here we will disable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
-
-
-def enable_main_trigger(event, context):
-    logger.debug(
-        "Here we will enable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
-
-
-def falsify_secrets(event, context):
-    logger.debug(
-        "Here we will modify the secrets for nwcapture-test so that lambdas talk to nwcapture-load.")
-
-
-def restore_secrets(event, context):
-    logger.debug(
-        "Here we will restore the secrets for nwcapture-test.")
-
-
-def run_integration_tests(event, context):
-    logger.debug("Here we will run tests and report results.")
+# def disable_main_trigger(event, context):
+#     logger.debug(
+#         "Here we will disable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
+#
+#
+# def enable_main_trigger(event, context):
+#     logger.debug(
+#         "Here we will enable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
+#
+#
+# def falsify_secrets(event, context):
+#     logger.debug(
+#         "Here we will modify the secrets for nwcapture-test so that lambdas talk to nwcapture-load.")
+#
+#
+# def restore_secrets(event, context):
+#     logger.debug(
+#         "Here we will restore the secrets for nwcapture-test.")
+#
+#
+# def run_integration_tests(event, context):
+#     logger.debug("Here we will run tests and report results.")

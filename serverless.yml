@@ -25,14 +25,6 @@ custom:
     subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
 
 functions:
-  copyS3:
-    handler: src.handler.copy_s3
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
   restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
@@ -43,15 +35,6 @@ functions:
 
   modifyDbCluster:
     handler: src.handler.modify_db_cluster
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-
-  deleteBucket:
-    handler: src.handler.delete_bucket
     role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -82,61 +65,74 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  falsifySecrets:
-    handler: src.handler.falsify_secrets
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
+#  copyS3:
+#    handler: src.handler.copy_s3
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  deleteBucket:
+#    handler: src.handler.delete_bucket
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  falsifySecrets:
+#    handler: src.handler.falsify_secrets
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  restoreSecrets:
+#    handler: src.handler.restore_secrets
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  disableMainTrigger:
+#    handler: src.handler.disable_main_trigger
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  enableMainTrigger:
+#    handler: src.handler.enable_main_trigger
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
+#
+#  runIntegrationTests:
+#    handler: src.handler.run_integration_tests
+#    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
+#    environment:
+#      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+#      MAX_RETRIES: 6
+#    vpc: ${self:custom.vpc}
 
-  restoreSecrets:
-    handler: src.handler.restore_secrets
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
 
-  disableMainTrigger:
-    handler: src.handler.disable_main_trigger
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-  enableMainTrigger:
-    handler: src.handler.enable_main_trigger
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-  runIntegrationTests:
-    handler: src.handler.run_integration_tests
-    role: arn:aws:iam::#{AWS::AccountId}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-
-
-
-
-resources:
-  Resources:
-    ReferenceFileBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-reference
-    # See aqts-capture-trigger, need to hook this bucket up to sqs queue ...
-    LoadTestBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-load
+#resources:
+#  Resources:
+#    ReferenceFileBucket:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-reference
+#    # See aqts-capture-trigger, need to hook this bucket up to sqs queue ...
+#    LoadTestBucket:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-load
 
 
 stepFunctions:
