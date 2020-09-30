@@ -86,11 +86,11 @@ def copy_s3_temp(event, context):
     s3 = boto3.resource('s3')
     src_bucket = s3.Bucket('iow-retriever-capture-reference')
     dest_bucket = s3.Bucket('iow-retriever-capture-load')
-    dest_bucket.objects.all().delete()  # this is optional clean bucket
+    dest_bucket.objects.all().delete()
     count = 0
     for obj in src_bucket.objects.all():
         logger.debug(f"found {obj.key} in src_bucket")
-        s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
+        s3.Object(dest_bucket, obj.key).put(Body=obj.get()["Body"].read())
         count = count + 1
     return {
         'statusCode': 200,
