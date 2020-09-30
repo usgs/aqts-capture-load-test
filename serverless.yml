@@ -120,10 +120,12 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [createDbInstance, Arn]
-            Next: WaitCreate
-          WaitCreate:
-            Type: Wait
-            Seconds: 1200
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 240
+                MaxAttempts: 4
+                BackoffRate: 2
             Next: DeleteDbInstance
 #          DisableTriggerReal:
 #            Type: Task
@@ -152,10 +154,12 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [ deleteDbInstance, Arn ]
-            Next: WaitDeleteDbInstance
-          WaitDeleteDbInstance:
-            Type: Wait
-            Seconds: 600
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 240
+                MaxAttempts: 4
+                BackoffRate: 2
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
