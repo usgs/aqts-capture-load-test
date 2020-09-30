@@ -65,6 +65,7 @@ def create_db_instance(event, context):
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
+        KmsKeyId='7654bdeb-56cd-4826-8e79-f9b8f9a53209',
         Engine=ENGINE
     )
     return {
@@ -108,6 +109,8 @@ def restore_db_cluster(event, context):
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False,
+        EnableIAMDatabaseAuthentication=False,
+        KmsKeyId='7654bdeb-56cd-4826-8e79-f9b8f9a53209',
         VpcSecurityGroupIds=[
             'sg-d0d1feaf',
         ],
