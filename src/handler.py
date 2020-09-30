@@ -18,7 +18,8 @@ SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
-BUCKET_LOAD = 'iow-retriever-capture-load'
+DEST_BUCKET = 'iow-retriever-capture-load'
+SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 
 
@@ -79,7 +80,7 @@ def delete_bucket(event, context):
     bucket.objects.all().delete()
     client = boto3.client('s3')
     response = client.delete_bucket(
-        Bucket=BUCKET_LOAD
+        Bucket=DEST_BUCKET
     )
 
 
@@ -88,7 +89,7 @@ def copy_s3(event, context):
     # as the real trigger bucket (name: aqts-retriever-capture-load)
 
     s3_client = boto3.client('s3')
-    resp = s3_client.list_objects_v2(Bucket='iow-retriever-capture-reference')
+    resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
         keys.append(obj['Key'])
@@ -97,10 +98,10 @@ def copy_s3(event, context):
     count = 0
     for key in keys:
         copy_source = {
-            'Bucket': 'iow-retriever-capture-reference',
+            'Bucket': SRC_BUCKET,
             'Key': key
         }
-        bucket = s3_resource.Bucket(BUCKET_LOAD)
+        bucket = s3_resource.Bucket(DEST_BUCKET)
         bucket.copy(copy_source, key)
         count = count + 1
     return {
@@ -110,7 +111,6 @@ def copy_s3(event, context):
 
 
 def restore_db_cluster(event, context):
-    logger.debug(f"SNAPSHOT_IDENTIFIER: {SNAPSHOT_IDENTIFIER}")
 
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
     response = client.restore_db_cluster_from_snapshot(
