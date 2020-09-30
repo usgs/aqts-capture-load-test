@@ -89,6 +89,7 @@ def copy_s3_temp(event, context):
     dest_bucket.objects.all().delete()  # this is optional clean bucket
     count = 0
     for obj in src_bucket.objects.all():
+        logger.debug(f"found {obj.key} in src_bucket")
         s3.Object('dest_bucket', obj.key).put(Body=obj.get()["Body"].read())
         count = count + 1
     return {
