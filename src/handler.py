@@ -83,14 +83,35 @@ def copy_s3_temp(event, context):
     # TODO modify aqts-capture-trigger to have a fake trigger bucket that works the same
     # as the real trigger bucket (name: aqts-retriever-capture-load)
 
-    s3 = boto3.resource('s3')
-    src_bucket = s3.Bucket('iow-retriever-capture-reference')
-    dest_bucket = s3.Bucket('iow-retriever-capture-load')
-    dest_bucket.objects.all().delete()
+    # s3 = boto3.resource('s3')
+    # src_bucket = s3.Bucket('iow-retriever-capture-reference')
+    # dest_bucket = s3.Bucket('iow-retriever-capture-load')
+    # dest_bucket.objects.all().delete()
+    # count = 0
+    # for obj in src_bucket.objects.all():
+    #     logger.debug(f"found {obj.key} in src_bucket")
+    #     s3.Object(dest_bucket, obj.key).put(Body=obj.get()["Body"].read())
+    #     count = count + 1
+    # return {
+    #     'statusCode': 200,
+    #     'message': f"copy_s3 copied {count} objects"
+    # }
+
+    s3_client = boto3.client('s3')
+    resp = s3_client.list_objects_v2(Bucket='iow-retriever-capture-reference')
+    keys = []
+    for obj in resp['Contents']:
+        keys.append(obj['Key'])
+
+    s3_resource = boto3.resource('s3')
     count = 0
-    for obj in src_bucket.objects.all():
-        logger.debug(f"found {obj.key} in src_bucket")
-        s3.Object(dest_bucket, obj.key).put(Body=obj.get()["Body"].read())
+    for key in keys:
+        copy_source = {
+            'Bucket': 'iow-retriever-capture-reference',
+            'Key': key
+        }
+        bucket = s3_resource.Bucket('iow-retriever-capture-load')
+        bucket.copy(copy_source, key)
         count = count + 1
     return {
         'statusCode': 200,
