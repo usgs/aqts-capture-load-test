@@ -118,7 +118,7 @@ def restore_db_cluster(event, context):
         SnapshotIdentifier=SNAPSHOT_IDENTIFIER,
         Engine=ENGINE,
         EngineVersion='11.7',
-        Port=5477,
+        Port=5432,
         DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
         DatabaseName='nwcapture-load',
         EnableIAMDatabaseAuthentication=False,
