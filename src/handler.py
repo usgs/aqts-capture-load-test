@@ -16,7 +16,9 @@ day = str(two_days_ago.day)
 if len(day) == 1:
     day = f"0{day}"
 
-SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
+# TODO Use prod db once we can connect to restored test snapshots
+SNAPSHOT_IDENTIFIER = f"rds:nwcapture-test-{two_days_ago.year}-{month}-{day}"
+#SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
@@ -35,16 +37,17 @@ def delete_db_cluster(event, context):
 
 
 def modify_db_cluster(event, context):
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.modify_db_cluster(
-        DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
-        ApplyImmediately=True,
-        MasterUserPassword='Password123'
-    )
-    return {
-        'statusCode': 200,
-        'message': f"Db cluster should be modified {response}"
-    }
+    logger.debug(f"EVENT:\n{event}")
+    # client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
+    # response = client.modify_db_cluster(
+    #     DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
+    #     ApplyImmediately=True,
+    #     MasterUserPassword='Password123'
+    # )
+    # return {
+    #     'statusCode': 200,
+    #     'message': f"Db cluster should be modified {response}"
+    # }
 
 
 def delete_db_instance(event, context):
