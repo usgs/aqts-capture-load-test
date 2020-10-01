@@ -14,6 +14,7 @@ day = str(two_days_ago.day)
 if len(day) == 1:
     day = f"0{day}"
 
+# Default snapshot identifier, may be overridden in restoreDbCluster
 SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
@@ -111,11 +112,14 @@ def copy_s3(event, context):
 
 
 def restore_db_cluster(event, context):
-
+    logger.debug(f"event: {event}")
+    my_snapshot_identifier = event.get("snapshotIdentifier")
+    if my_snapshot_identifier is None:
+        my_snapshot_identifier = SNAPSHOT_IDENTIFIER
     client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
     response = client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
-        SnapshotIdentifier=SNAPSHOT_IDENTIFIER,
+        SnapshotIdentifier=my_snapshot_identifier,
         Engine=ENGINE,
         EngineVersion='11.7',
         Port=5432,
@@ -135,27 +139,3 @@ def restore_db_cluster(event, context):
         'statusCode': 201,
         'message': f"Db cluster should be restored {response}"
     }
-
-
-# def disable_main_trigger(event, context):
-#     logger.debug(
-#         "Here we will disable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
-#
-#
-# def enable_main_trigger(event, context):
-#     logger.debug(
-#         "Here we will enable the main trigger on the real bucket.  See aqts-capture-ecosystem-switch.")
-#
-#
-# def falsify_secrets(event, context):
-#     logger.debug(
-#         "Here we will modify the secrets for nwcapture-test so that lambdas talk to nwcapture-load.")
-#
-#
-# def restore_secrets(event, context):
-#     logger.debug(
-#         "Here we will restore the secrets for nwcapture-test.")
-#
-#
-# def run_integration_tests(event, context):
-#     logger.debug("Here we will run tests and report results.")
