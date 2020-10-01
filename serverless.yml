@@ -123,6 +123,7 @@ stepFunctions:
           WaitForProcessing:
             Type: Wait
             Seconds: 600
+            Next: DeleteDbInstance
           DeleteDbInstance:
             Type: Task
             Resource:
