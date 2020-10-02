@@ -153,8 +153,8 @@ def falsify_secrets(event, context):
 def update_secrets(event, context):
     original = secrets_client.get_secret_value(SecretId="NWCAPTURE-LOAD")
     logger.debug(f"UPDATE_SECRETS original={original}")
-    my_obj = {"NEW_KEY": "NEW_VAL"}
-    original.update_secret(SecretId="NWCAPTURE-LOAD", SecretString=json.dumps(my_obj))
+    original["NEW_KEY"] = "NEW_VAL";
+    secrets_client.update_secret(SecretId="NWCAPTURE-LOAD", SecretString=json.dumps(original))
 
 def delete_secrets(event, context):
     response = secrets_client.delete_secret(
