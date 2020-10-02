@@ -24,10 +24,12 @@ DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 
+secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
+rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
+
 
 def delete_db_cluster(event, context):
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.delete_db_cluster(
+    response = rds_client.delete_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SkipFinalSnapshot=True
     )
@@ -38,8 +40,7 @@ def delete_db_cluster(event, context):
 
 
 def modify_db_cluster(event, context):
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.modify_db_cluster(
+    response = rds_client.modify_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         ApplyImmediately=True,
         MasterUserPassword='Password123'
@@ -51,8 +52,7 @@ def modify_db_cluster(event, context):
 
 
 def delete_db_instance(event, context):
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.delete_db_instance(
+    response = rds_client.delete_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         SkipFinalSnapshot=True
     )
@@ -63,8 +63,7 @@ def delete_db_instance(event, context):
 
 
 def create_db_instance(event, context):
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.create_db_instance(
+    response = rds_client.create_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
@@ -117,8 +116,7 @@ def restore_db_cluster(event, context):
     my_snapshot_identifier = event.get("snapshotIdentifier")
     if my_snapshot_identifier is None:
         my_snapshot_identifier = SNAPSHOT_IDENTIFIER
-    client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
-    response = client.restore_db_cluster_from_snapshot(
+    response = rds_client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SnapshotIdentifier=my_snapshot_identifier,
         Engine=ENGINE,
@@ -144,10 +142,15 @@ def restore_db_cluster(event, context):
 
 def falsify_secrets(event, context):
     # get original secrets
-    client = boto3.client('secretsmanager')
-    original_secret = client.get_secret_value(SecretId="NWCAPTURE-DB-TEST")
-    logger.debug(f"Original secret {original_secret}")
-    # update secrets
-    original_secret.update({"LOAD_BUCKET": "iow-retriever-capture-load"})
-    logger.debug(f"Updated secrete {original_secret}")
-    client.update_secret(SecretId="NWCAPTURE-DB-TEST", SecretString=json.dumps(original_secret))
+    my_secrets = {"TEST_BUCKET": "iow-retriever-capture-load", "DB_USERNAME": "postgres"}
+    response = secrets_client.create_secret(
+        Name='NWCAPTURE-LOAD',
+        Description='Load test settings',
+        SecretString=json.dumps(my_secrets)
+    )
+
+
+def update_secrets(event, context):
+    original = secrets_client.get_secret_value("NWCAPTURE-LOAD")
+    logger.debug(f"UPDATE_SECRETS original={original}")
+    original.update_secret("NEW_KEY", "NEW_VAL")
