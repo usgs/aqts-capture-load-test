@@ -1,3 +1,4 @@
+import json
 import os
 import boto3
 import datetime
@@ -139,3 +140,14 @@ def restore_db_cluster(event, context):
         'statusCode': 201,
         'message': f"Db cluster should be restored {response}"
     }
+
+
+def falsify_secrets(event, context):
+    # get original secrets
+    client = boto3.client('secretsmanager')
+    original_secret = client.get_secret_value(SecretId="NWCAPTURE-DB-TEST")
+    logger.debug(f"Original secret {original_secret}")
+    # update secrets
+    updated_secret = original_secret.update({"LOAD_BUCKET": "iow-retriever-capture-load"})
+    logger.debug(f"Updated secrete {updated_secret}")
+    client.update_secret(SecretId="NWCAPTURE-DB-TEST", SecretString=json.dumps(updated_secret))

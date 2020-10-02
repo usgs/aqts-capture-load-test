@@ -66,6 +66,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  falsifySecrets:
+    handler: src.handler.falsify_secrets
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
 resources:
   Resources:
     ReferenceFileBucket:
