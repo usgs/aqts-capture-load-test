@@ -148,6 +148,6 @@ def falsify_secrets(event, context):
     original_secret = client.get_secret_value(SecretId="NWCAPTURE-DB-TEST")
     logger.debug(f"Original secret {original_secret}")
     # update secrets
-    updated_secret = original_secret.update({"LOAD_BUCKET": "iow-retriever-capture-load"})
-    logger.debug(f"Updated secrete {updated_secret}")
-    client.update_secret(SecretId="NWCAPTURE-DB-TEST", SecretString=json.dumps(updated_secret))
+    original_secret.update({"LOAD_BUCKET": "iow-retriever-capture-load"})
+    logger.debug(f"Updated secrete {original_secret}")
+    client.update_secret(SecretId="NWCAPTURE-DB-TEST", SecretString=json.dumps(original_secret))
