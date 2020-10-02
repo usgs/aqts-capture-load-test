@@ -26,7 +26,7 @@ custom:
     subnetIds: ${ssm:/iow/aws/vpc/${self:provider.stage}/subnetIds~split}
 
 functions:
-  RestoreDbCluster:
+  restoreDbCluster:
     handler: src.handler.restore_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
@@ -34,7 +34,31 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  DeleteDbCluster:
+  modifyDbCluster:
+    handler: src.handler.modify_db_cluster
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  createDbInstance:
+    handler: src.handler.create_db_instance
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  deleteDbInstance:
+    handler: src.handler.delete_db_instance
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  deleteDbCluster:
     handler: src.handler.delete_db_cluster
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
@@ -42,9 +66,86 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+resources:
+  Resources:
+    ReferenceFileBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: iow-retriever-capture-reference
+    # See aqts-capture-trigger, need to hook this bucket up to sqs queue ...
+    LoadTestBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: iow-retriever-capture-load
+
+
+stepFunctions:
+  stateMachines:
+    aqtsLoadTest:
+      loggingConfig:
+        level: ALL
+        includeExecutionData: true
+        destinations:
+          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
+      role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
+      name: aqts-capture-load-test-${self:provider.stage}
+      definition:
+        Comment: "AQTS Load Test"
+        StartAt: RestoreDbCluster
+        States:
+          RestoreDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [restoreDbCluster, Arn]
+            Next: ModifyDbCluster
+          ModifyDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [modifyDbCluster, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 600
+                MaxAttempts: 10
+                BackoffRate: 1
+            Next: CreateDbInstance
+          CreateDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [createDbInstance, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 600
+                MaxAttempts: 10
+                BackoffRate: 1
+            Next: WaitForProcessing
+          WaitForProcessing:
+            Type: Wait
+            Seconds: 600
+            Next: DeleteDbInstance
+          DeleteDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ deleteDbInstance, Arn ]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 900
+                MaxAttempts: 8
+                BackoffRate: 1
+            Next: DeleteDbCluster
+          DeleteDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [deleteDbCluster, Arn]
+            End: true
+
 plugins:
   - serverless-plugin-git-variables
+  - serverless-step-functions
   - serverless-python-requirements
+  - serverless-pseudo-parameters
 
 package:
   exclude:
