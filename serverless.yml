@@ -74,17 +74,8 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  updateSecrets:
-    handler: src.handler.update_secrets
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-
   deleteSecrets:
-    handler: src.handler.delete_secrets
+    handler: src.handler.restore_secrets
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}

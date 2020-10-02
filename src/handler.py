@@ -23,6 +23,7 @@ ENGINE = 'aurora-postgresql'
 DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
+NWCAPTURE_LOAD = 'NWCAPTURE-LOAD'
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -145,7 +146,7 @@ def falsify_secrets(event, context):
     my_secrets = {}
     try:
         response = secrets_client.create_secret(
-            Name='NWCAPTURE-LOAD',
+            Name=NWCAPTURE_LOAD,
             Description='Load test settings',
             SecretString=json.dumps(my_secrets)
         )
@@ -153,7 +154,7 @@ def falsify_secrets(event, context):
         logger.error(e)
 
     original = secrets_client.get_secret_value(
-        SecretId='NWCAPTURE-LOAD',
+        SecretId='NWCAPTURE-DB-TEST',
 
     )
     secret_string = json.loads(original['SecretString'])
@@ -164,11 +165,11 @@ def falsify_secrets(event, context):
     secret_string['SCHMEA_OWNER_PASSWORD'] = "Password123"
     secret_string = {"TEST_BUCKET": "iow-retriever-capture-test", "SCHEMA_OWNER_USERNAME": "postgres",
                      "SCHEMA_OWNER_PASSWORD": "Password123"}
-    secrets_client.update_secret(SecretId="NWCAPTURE-LOAD", SecretString=json.dumps(secret_string))
+    secrets_client.update_secret(SecretId=NWCAPTURE_LOAD, SecretString=json.dumps(secret_string))
 
 
 def restore_secrets(event, context):
     response = secrets_client.delete_secret(
-        SecretId='NWCAPTURE-LOAD',
+        SecretId=NWCAPTURE_LOAD,
         ForceDeleteWithoutRecovery=True
     )
