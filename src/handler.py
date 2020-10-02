@@ -143,16 +143,20 @@ def restore_db_cluster(event, context):
 def falsify_secrets(event, context):
     # get original secrets
     my_secrets = {}
-    response = secrets_client.create_secret(
-        Name='NWCAPTURE-LOAD',
-        Description='Load test settings',
-        SecretString=json.dumps(my_secrets)
-    )
+    try:
+        response = secrets_client.create_secret(
+            Name='NWCAPTURE-LOAD',
+            Description='Load test settings',
+            SecretString=json.dumps(my_secrets)
+        )
+    except Exception as e:
+        logger.error(e)
+
     original = secrets_client.get_secret_value(
         SecretId='NWCAPTURE-LOAD',
 
     )
-    secret_string = json.load(original['SecretString'])
+    secret_string = json.loads(original['SecretString'])
     secret_string['TEST_BUCKET'] = "iow-retriever-capture-test"
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = secret_string['SCHEMA_OWNER_USERNAME']
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = secret_string['SCHEMA_OWNER_PASSWORD']
@@ -161,6 +165,7 @@ def falsify_secrets(event, context):
     secret_string = {"TEST_BUCKET": "iow-retriever-capture-test", "SCHEMA_OWNER_USERNAME": "postgres",
                      "SCHEMA_OWNER_PASSWORD": "Password123"}
     secrets_client.update_secret(SecretId="NWCAPTURE-LOAD", SecretString=json.dumps(secret_string))
+
 
 def restore_secrets(event, context):
     response = secrets_client.delete_secret(
