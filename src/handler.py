@@ -154,3 +154,9 @@ def update_secrets(event, context):
     original = secrets_client.get_secret_value("NWCAPTURE-LOAD")
     logger.debug(f"UPDATE_SECRETS original={original}")
     original.update_secret("NEW_KEY", "NEW_VAL")
+
+def delete_secrets(event, context):
+    response = secrets_client.delete_secret(
+        SecretId='NWCAPTURE-LOAD',
+        ForceDeleteWithoutRecovery=True
+    )
