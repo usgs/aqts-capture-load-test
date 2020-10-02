@@ -142,22 +142,27 @@ def restore_db_cluster(event, context):
 
 def falsify_secrets(event, context):
     # get original secrets
-    my_secrets = {"TEST_BUCKET": "iow-retriever-capture-load", "DB_USERNAME": "postgres"}
+    my_secrets = {}
     response = secrets_client.create_secret(
         Name='NWCAPTURE-LOAD',
         Description='Load test settings',
         SecretString=json.dumps(my_secrets)
     )
+    original = secrets_client.get_secret_value(
+        SecretId='NWCAPTURE-LOAD',
 
-
-def update_secrets(event, context):
-    original = secrets_client.get_secret_value(SecretId="NWCAPTURE-LOAD")
-    logger.debug(f"UPDATE_SECRETS original={original}")
-    secret_string = json.loads(original['SecretString'])
-    secret_string["NEW_KEY"] = "NEW_VAL";
+    )
+    secret_string = json.load(original['SecretString'])
+    secret_string['TEST_BUCKET'] = "iow-retriever-capture-test"
+    secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = secret_string['SCHEMA_OWNER_USERNAME']
+    secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = secret_string['SCHEMA_OWNER_PASSWORD']
+    secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
+    secret_string['SCHMEA_OWNER_PASSWORD'] = "Password123"
+    secret_string = {"TEST_BUCKET": "iow-retriever-capture-test", "SCHEMA_OWNER_USERNAME": "postgres",
+                     "SCHEMA_OWNER_PASSWORD": "Password123"}
     secrets_client.update_secret(SecretId="NWCAPTURE-LOAD", SecretString=json.dumps(secret_string))
 
-def delete_secrets(event, context):
+def restore_secrets(event, context):
     response = secrets_client.delete_secret(
         SecretId='NWCAPTURE-LOAD',
         ForceDeleteWithoutRecovery=True
