@@ -157,14 +157,14 @@ def falsify_secrets(event, context):
         SecretId='NWCAPTURE-DB-TEST',
 
     )
+    logger.debug(f"ORIGINAL BEFORE {original['SecretString']}")
     secret_string = json.loads(original['SecretString'])
     secret_string['TEST_BUCKET'] = "iow-retriever-capture-test"
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = secret_string['SCHEMA_OWNER_USERNAME']
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = secret_string['SCHEMA_OWNER_PASSWORD']
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
-    secret_string['SCHMEA_OWNER_PASSWORD'] = "Password123"
-    secret_string = {"TEST_BUCKET": "iow-retriever-capture-test", "SCHEMA_OWNER_USERNAME": "postgres",
-                     "SCHEMA_OWNER_PASSWORD": "Password123"}
+    secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
+    logger.debug(f"ORIGINAL AFTER {original['SecretString']}")
     secrets_client.update_secret(SecretId=NWCAPTURE_LOAD, SecretString=json.dumps(secret_string))
 
 
