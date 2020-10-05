@@ -205,7 +205,7 @@ def add_trigger_to_bucket(event, context):
     logger.info(f"using {my_queue_url}")
     response = sqs_client.get_queue_attributes(
         QueueUrl=my_queue_url,
-        AttributeNames='QueueArn'
+        AttributeNames=['QueueArn']
     )
     logger.info(f"QUEUE ATTRIBUTES: {response}")
 
