@@ -105,25 +105,6 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: iow-retriever-capture-reference
-    LoadTestBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-load
-        AccessControl: Private
-        LifecycleConfiguration:
-          Rules:
-              - ExpirationInDays: 4
-                Status: Enabled
-        NotificationConfiguration:
-          QueueConfigurations:
-            - Event: s3:ObjectCreated:Put
-              Filter:
-                S3Key:
-                  Rules:
-                    - Name: suffix
-                      Value: .json
-              Queue:
-                Fn::ImportValue: TriggerQueue
 
 stepFunctions:
   stateMachines:
