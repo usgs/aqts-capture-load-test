@@ -176,7 +176,7 @@ def disable_trigger(event, context):
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
-            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
+            #lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
             returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
             logger.debug(f"Trigger should be disabled.  function name: {function_name} item: {returned}")
     return True
