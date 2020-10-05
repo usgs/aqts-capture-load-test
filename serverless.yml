@@ -74,7 +74,7 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  deleteSecrets:
+  restoreSecrets:
     handler: src.handler.restore_secrets
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
@@ -82,17 +82,48 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  disableTrigger:
+    handler: src.handler.disable_trigger
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  enableTrigger:
+    handler: src.handler.enable_trigger
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+
 resources:
   Resources:
     ReferenceFileBucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: iow-retriever-capture-reference
-    # See aqts-capture-trigger, need to hook this bucket up to sqs queue ...
     LoadTestBucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: iow-retriever-capture-load
+        AccessControl: Private
+          LifecycleConfiguration:
+            Rules:
+                - ExpirationInDays: 4
+                  Status: Enabled
+          NotificationConfiguration:
+            QueueConfigurations:
+              - Event: s3:ObjectCreated:Put
+                Filter:
+                  S3Key:
+                    Rules:
+                      - Name: suffix
+                        Value: .json
+                Queue:
+                   Fn::ImportValue: TriggerQueueName
 
 
 stepFunctions:
@@ -107,8 +138,18 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: RestoreDbCluster
+        StartAt: DisableTrigger
         States:
+          DisableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [disableTrigger, Arn]
+            Next: FalsifySecrets
+          FalsifySecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [falsifySecrets, Arn]
+            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:
@@ -155,6 +196,16 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [deleteDbCluster, Arn]
+            Next: RestoreSecrets
+          RestoreSecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [restoreSecrets, Arn]
+            Next: EnableTrigger
+          EnableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enableTrigger, Arn]
             End: true
 
 plugins:

@@ -23,10 +23,14 @@ ENGINE = 'aurora-postgresql'
 DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
-NWCAPTURE_LOAD = 'NWCAPTURE-LOAD'
+NWCAPTURE_TEST = 'NWCAPTURE-DB-TEST'
+
+TEST_LAMBDA_TRIGGERS = [
+    'aqts-capture-trigger-TEST-aqtsCaptureTrigger', 'aqts-capture-trigger-tmp-TEST-aqtsCaptureTrigger']
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
+lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
 
 
 def delete_db_cluster(event, context):
@@ -142,34 +146,49 @@ def restore_db_cluster(event, context):
 
 
 def falsify_secrets(event, context):
-    # get original secrets
-    my_secrets = {}
-    try:
-        response = secrets_client.create_secret(
-            Name=NWCAPTURE_LOAD,
-            Description='Load test settings',
-            SecretString=json.dumps(my_secrets)
-        )
-    except Exception as e:
-        logger.error(e)
-
     original = secrets_client.get_secret_value(
-        SecretId='NWCAPTURE-DB-TEST',
-
+        SecretId=NWCAPTURE_TEST,
     )
-    logger.debug(f"ORIGINAL BEFORE {original['SecretString']}")
     secret_string = json.loads(original['SecretString'])
-    secret_string['TEST_BUCKET'] = "iow-retriever-capture-test"
+    secret_string['TEST_BUCKET'] = DEST_BUCKET
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = secret_string['SCHEMA_OWNER_USERNAME']
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = secret_string['SCHEMA_OWNER_PASSWORD']
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
     secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
-    logger.debug(f"ORIGINAL AFTER {original['SecretString']}")
-    secrets_client.update_secret(SecretId=NWCAPTURE_LOAD, SecretString=json.dumps(secret_string))
+    secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
 
 
 def restore_secrets(event, context):
-    response = secrets_client.delete_secret(
-        SecretId=NWCAPTURE_LOAD,
-        ForceDeleteWithoutRecovery=True
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_TEST,
     )
+    secret_string = json.loads(original['SecretString'])
+    del secret_string['TEST_BUCKET']
+    secret_string['SCHEMA_OWNER_USERNAME'] = secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
+    secret_string['SCHEMA_OWNER_PASSWORD'] = secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
+    del secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
+    del secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
+    secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
+
+
+def disable_trigger(event, context):
+    logger.debug("trying to disable trigger")
+    for function_name in TEST_LAMBDA_TRIGGERS:
+        response = lambda_client.list_event_source_mappings(FunctionName=function_name)
+        for item in response['EventSourceMappings']:
+            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
+            returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
+            logger.debug(f"Trigger should be disabled.  function name: {function_name} item: {returned}")
+    return True
+
+
+def enable_trigger(event_context):
+    logger.debug("trying to enable trigger")
+    for function_name in TEST_LAMBDA_TRIGGERS:
+        response = lambda_client.list_event_source_mappings(FunctionName=function_name)
+        for item in response['EventSourceMappings']:
+            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+            returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
+            logger.debug(f"Trigger should be enabled.  function name: {function_name} item: {returned}")
+    return True
+
