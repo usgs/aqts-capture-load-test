@@ -209,17 +209,17 @@ def add_trigger_to_bucket(event, context):
 
     # queue_attributes = sqs_client.get_queue_attributes()
 
-    response = bucket_notification.put(
-        NotificationConfiguration={
-
-            'QueueConfigurations': [
-                {
-                    'Id': 'string',
-                    'QueueArn': 'string',
-                    'Events': [
-                        's3:ReducedRedundancyLostObject'|'s3:ObjectCreated:*'|'s3:ObjectCreated:Put'|'s3:ObjectCreated:Post'|'s3:ObjectCreated:Copy'|'s3:ObjectCreated:CompleteMultipartUpload'|'s3:ObjectRemoved:*'|'s3:ObjectRemoved:Delete'|'s3:ObjectRemoved:DeleteMarkerCreated'|'s3:ObjectRestore:*'|'s3:ObjectRestore:Post'|'s3:ObjectRestore:Completed'|'s3:Replication:*'|'s3:Replication:OperationFailedReplication'|'s3:Replication:OperationNotTracked'|'s3:Replication:OperationMissedThreshold'|'s3:Replication:OperationReplicatedAfterThreshold',
-                    ]
-                }
-            ]
-        }
-    )
+    # response = bucket_notification.put(
+    #     NotificationConfiguration={
+    #
+    #         'QueueConfigurations': [
+    #             {
+    #                 'Id': 'string',
+    #                 'QueueArn': 'string',
+    #                 'Events': [
+    #                     's3:ObjectCreated:*'
+    #                 ]
+    #             }
+    #         ]
+    #     }
+    # )
