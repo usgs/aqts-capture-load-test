@@ -228,7 +228,7 @@ def add_trigger_to_bucket(event, context):
     logger.info(f"response {response}")
 
 
-def add_trigger_to_bucket(event, context):
+def remove_trigger_from_bucket(event, context):
     s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
