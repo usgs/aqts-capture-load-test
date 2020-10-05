@@ -98,6 +98,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  addTriggerToBucket:
+    handler: src.handler.add_trigger_to_bucket
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
 
 resources:
   Resources:
@@ -105,6 +113,19 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: iow-retriever-capture-reference
+    S3BucketLoadTest:
+      Type: AWS::S3::Bucket
+      DependsOn:
+        - triggerQueue
+        - triggerQueuePolicy
+      Properties:
+        BucketName: iow-retriever-capture-load
+        AccessControl: Private
+        LifecycleConfiguration:
+          Rules:
+            - ExpirationInDays: 4
+              Status: Enabled
+
 
 stepFunctions:
   stateMachines:

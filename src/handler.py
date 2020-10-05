@@ -31,6 +31,7 @@ TEST_LAMBDA_TRIGGERS = [
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
+sqs_client = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
 
 
 def delete_db_cluster(event, context):
@@ -176,13 +177,13 @@ def disable_trigger(event, context):
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
-            #lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
+            # lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
             returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
             logger.debug(f"Trigger should be disabled.  function name: {function_name} item: {returned}")
     return True
 
 
-def enable_trigger(event_context):
+def enable_trigger(event, context):
     logger.debug("trying to enable trigger")
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
@@ -192,3 +193,13 @@ def enable_trigger(event_context):
             logger.debug(f"Trigger should be enabled.  function name: {function_name} item: {returned}")
     return True
 
+
+def add_trigger_to_bucket(event, context):
+    s3 = boto3.resource('s3')
+    bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
+    logger.info(f"BUCKET NOTIFICATION {bucket_notification}")
+
+    response = sqs_client.list_queues()
+    logger.info(f"SQS QUEUES {response['QueueUrls']}")
+
+    # queue_attributes = sqs_client.get_queue_attributes()
