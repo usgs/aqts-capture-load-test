@@ -122,6 +122,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  copyS3:
+    handler: src.handler.copy_s3
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
 resources:
   Resources:
     ReferenceFileBucket:
