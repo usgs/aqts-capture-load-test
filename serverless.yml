@@ -110,21 +110,20 @@ resources:
       Properties:
         BucketName: iow-retriever-capture-load
         AccessControl: Private
-          LifecycleConfiguration:
-            Rules:
-                - ExpirationInDays: 4
-                  Status: Enabled
-          NotificationConfiguration:
-            QueueConfigurations:
-              - Event: s3:ObjectCreated:Put
-                Filter:
-                  S3Key:
-                    Rules:
-                      - Name: suffix
-                        Value: .json
-                Queue:
-                   Fn::ImportValue: TriggerQueueName
-
+        LifecycleConfiguration:
+          Rules:
+              - ExpirationInDays: 4
+                Status: Enabled
+        NotificationConfiguration:
+          QueueConfigurations:
+            - Event: s3:ObjectCreated:Put
+              Filter:
+                S3Key:
+                  Rules:
+                    - Name: suffix
+                      Value: .json
+              Queue:
+                Fn::ImportValue: TriggerQueueName
 
 stepFunctions:
   stateMachines:
