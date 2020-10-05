@@ -216,7 +216,7 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [runIntegrationTests, Arn]
-              Netx: DeleteDbInstance
+            Next: DeleteDbInstance
           DeleteDbInstance:
             Type: Task
             Resource:
