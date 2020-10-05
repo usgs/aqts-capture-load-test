@@ -197,9 +197,29 @@ def enable_trigger(event, context):
 def add_trigger_to_bucket(event, context):
     s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
-    logger.info(f"BUCKET NOTIFICATION {bucket_notification}")
-
+    my_queue_url = ""
     response = sqs_client.list_queues()
-    logger.info(f"SQS QUEUES {response['QueueUrls']}")
+    for url in response['QueueUrls']:
+        if "aqts-capture-trigger-queue-TEST" in url:
+            my_queue_url = url
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url
+    )
+    logger.info(f"QUEUE ATTRIBUTES: {response}")
 
     # queue_attributes = sqs_client.get_queue_attributes()
+
+    response = bucket_notification.put(
+        NotificationConfiguration={
+
+            'QueueConfigurations': [
+                {
+                    'Id': 'string',
+                    'QueueArn': 'string',
+                    'Events': [
+                        's3:ReducedRedundancyLostObject'|'s3:ObjectCreated:*'|'s3:ObjectCreated:Put'|'s3:ObjectCreated:Post'|'s3:ObjectCreated:Copy'|'s3:ObjectCreated:CompleteMultipartUpload'|'s3:ObjectRemoved:*'|'s3:ObjectRemoved:Delete'|'s3:ObjectRemoved:DeleteMarkerCreated'|'s3:ObjectRestore:*'|'s3:ObjectRestore:Post'|'s3:ObjectRestore:Completed'|'s3:Replication:*'|'s3:Replication:OperationFailedReplication'|'s3:Replication:OperationNotTracked'|'s3:Replication:OperationMissedThreshold'|'s3:Replication:OperationReplicatedAfterThreshold',
+                    ]
+                }
+            ]
+        }
+    )
