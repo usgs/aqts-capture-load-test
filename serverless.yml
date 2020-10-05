@@ -115,9 +115,6 @@ resources:
         BucketName: iow-retriever-capture-reference
     S3BucketLoadTest:
       Type: AWS::S3::Bucket
-      DependsOn:
-        - triggerQueue
-        - triggerQueuePolicy
       Properties:
         BucketName: iow-retriever-capture-load
         AccessControl: Private
