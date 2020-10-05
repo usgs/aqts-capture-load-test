@@ -123,7 +123,7 @@ resources:
                     - Name: suffix
                       Value: .json
               Queue:
-                Fn::ImportValue: TriggerQueueName
+                Fn::ImportValue: TriggerQueue
 
 stepFunctions:
   stateMachines:
