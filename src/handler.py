@@ -5,7 +5,7 @@ import datetime
 import logging
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 month = str(two_days_ago.month)
@@ -202,12 +202,10 @@ def add_trigger_to_bucket(event, context):
     for url in response['QueueUrls']:
         if "aqts-capture-trigger-queue-TEST" in url:
             my_queue_url = url
-            logger.info("found my_queue_url")
-        else:
-            logger.info(f"reject {url}")
     logger.info(f"using {my_queue_url}")
     response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url
+        QueueUrl=my_queue_url,
+        AttributeNames='QueueArn'
     )
     logger.info(f"QUEUE ATTRIBUTES: {response}")
 
