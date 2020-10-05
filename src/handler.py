@@ -207,21 +207,19 @@ def add_trigger_to_bucket(event, context):
         QueueUrl=my_queue_url,
         AttributeNames=['QueueArn']
     )
-    logger.info(f"QUEUE ATTRIBUTES: {response}")
+    my_queue_arn = response['Attributes']['QueueArn']
+    logger.info(f"MY QUEUE ARN: {my_queue_arn}")
 
-    # queue_attributes = sqs_client.get_queue_attributes()
-
-    # response = bucket_notification.put(
-    #     NotificationConfiguration={
-    #
-    #         'QueueConfigurations': [
-    #             {
-    #                 'Id': 'string',
-    #                 'QueueArn': 'string',
-    #                 'Events': [
-    #                     's3:ObjectCreated:*'
-    #                 ]
-    #             }
-    #         ]
-    #     }
-    # )
+    response = bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+                {
+                    'QueueArn': my_queue_arn,
+                    'Events': [
+                        's3:ObjectCreated:*'
+                    ]
+                }
+            ]
+        }
+    )
+    logger.info(f"response {response}")
