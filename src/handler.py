@@ -4,6 +4,8 @@ import boto3
 import datetime
 import logging
 
+from src.rds import RDS
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
@@ -119,9 +121,11 @@ def copy_s3(event, context):
 
 def restore_db_cluster(event, context):
     logger.debug(f"event: {event}")
-    my_snapshot_identifier = event.get("snapshotIdentifier")
-    if my_snapshot_identifier is None:
-        my_snapshot_identifier = SNAPSHOT_IDENTIFIER
+    my_snapshot_identifier = SNAPSHOT_IDENTIFIER
+    if event is not None:
+        if event.get("snapshotIdentifier") is not None:
+            my_snapshot_identifier = event.get("snapshotIdentifier")
+            
     response = rds_client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SnapshotIdentifier=my_snapshot_identifier,
@@ -253,3 +257,19 @@ def remove_trigger_from_bucket(event, context):
     )
     bucket_notification.load()
     logger.info(f"response {response}")
+
+
+def run_integration_tests(event, context):
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_TEST,
+    )
+    secret_string = json.loads(original['SecretString'])
+    logger.info(f"secrets {secret_string}")
+    os.environ['DB_HOST'] = secret_string['DATABASE_ADDRESS']
+    os.environ['DB_USER'] = secret_string['SCHEMA_OWNER_USERNAME']
+    os.environ['DB_NAME'] = secret_string['DATABASE_NAME']
+    os.environ['DB_PASSWORD'] = secret_string['SCHEMA_OWNER_PASSWORD']
+    rds = RDS()
+    sql = "select count(1) from json_data"
+    result = rds.execute_sql(sql)
+    logger.info(f"RESULT: {result}")

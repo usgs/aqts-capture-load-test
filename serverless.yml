@@ -114,6 +114,14 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  runIntegrationTests:
+    handler: src.handler.run_integration_tests
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
 resources:
   Resources:
     ReferenceFileBucket:
@@ -186,11 +194,21 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [addTriggerToBucket, Arn]
+            Next: CopyS3
+          CopyS3:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [copyS3, Arn]
             Next: WaitForProcessing
           WaitForProcessing:
             Type: Wait
             Seconds: 600
-            Next: DeleteDbInstance
+            Next: RunIntegrationTests
+          RunIntegrationTests:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [runIntegrationTests, Arn]
+              Netx: DeleteDbInstance
           DeleteDbInstance:
             Type: Task
             Resource:
