@@ -202,7 +202,6 @@ def add_trigger_to_bucket(event, context):
     s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
-    logger.info(f"available bucket resources {bucket_notification.get_available_resources()}")
     my_queue_url = ""
     response = sqs_client.list_queues()
     for url in response['QueueUrls']:
