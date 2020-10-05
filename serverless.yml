@@ -106,6 +106,13 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  removeTriggerFromBucket:
+    handler: src.handler.remove_trigger_from_bucket
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
 
 resources:
   Resources:
@@ -174,6 +181,11 @@ stepFunctions:
                 IntervalSeconds: 600
                 MaxAttempts: 10
                 BackoffRate: 1
+            Next: AddTriggerToTestBucket
+          AddTriggerToTestBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [addTriggerToBucket, Arn]
             Next: WaitForProcessing
           WaitForProcessing:
             Type: Wait
@@ -194,6 +206,11 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [deleteDbCluster, Arn]
+            Next: RemoveTriggerFromTestBucket
+          RemoveTriggerFromTestBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [removeTriggerFromBucket, Arn]
             Next: RestoreSecrets
           RestoreSecrets:
             Type: Task

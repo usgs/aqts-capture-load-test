@@ -197,6 +197,8 @@ def enable_trigger(event, context):
 def add_trigger_to_bucket(event, context):
     s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
+    bucket_notification.load()
+    logger.info(f"available bucket resources {bucket_notification.get_available_resources()}")
     my_queue_url = ""
     response = sqs_client.list_queues()
     for url in response['QueueUrls']:
@@ -222,4 +224,32 @@ def add_trigger_to_bucket(event, context):
             ]
         }
     )
+    bucket_notification.load()
+    logger.info(f"response {response}")
+
+
+def add_trigger_to_bucket(event, context):
+    s3 = boto3.resource('s3')
+    bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
+    bucket_notification.load()
+    my_queue_url = ""
+    response = sqs_client.list_queues()
+    for url in response['QueueUrls']:
+        if "aqts-capture-trigger-queue-TEST" in url:
+            my_queue_url = url
+    logger.info(f"using {my_queue_url}")
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url,
+        AttributeNames=['QueueArn']
+    )
+    my_queue_arn = response['Attributes']['QueueArn']
+    logger.info(f"MY QUEUE ARN: {my_queue_arn}")
+
+    response = bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+            ]
+        }
+    )
+    bucket_notification.load()
     logger.info(f"response {response}")
