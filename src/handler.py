@@ -127,7 +127,6 @@ def falsify_secrets(event, context):
         SecretId=NWCAPTURE_TEST,
     )
     secret_string = json.loads(original['SecretString'])
-    secret_string['TEST_BUCKET'] = DEST_BUCKET
     orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
     orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
@@ -231,6 +230,6 @@ def run_integration_tests(event, context):
     db_name = secret_string['DATABASE_NAME']
     db_password = secret_string['SCHEMA_OWNER_PASSWORD']
     rds = RDS(db_host, db_user, db_name, db_password)
-    sql = "select count(1) from json_data"
+    sql = "select count(1) from capture.json_data"
     result = rds.execute_sql(sql)
     logger.info(f"RESULT: {result}")
