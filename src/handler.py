@@ -8,6 +8,7 @@ from src.rds import RDS
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 month = str(two_days_ago.month)
@@ -17,7 +18,8 @@ day = str(two_days_ago.day)
 if len(day) == 1:
     day = f"0{day}"
 
-# Default snapshot identifier, may be overridden in restoreDbCluster
+# Default snapshot identifier, may be overridden by passing a custom
+# snapshot identifier in the step function event
 SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
@@ -34,77 +36,48 @@ secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGIO
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
 sqs_client = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
+s3_client = boto3.client('s3')
+s3 = boto3.resource('s3')
 
 
 def delete_db_cluster(event, context):
-    response = rds_client.delete_db_cluster(
+    rds_client.delete_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SkipFinalSnapshot=True
     )
-    return {
-        'statusCode': 200,
-        'message': f"Db cluster should be deleted {response}"
-    }
 
 
 def modify_db_cluster(event, context):
-    response = rds_client.modify_db_cluster(
+    rds_client.modify_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         ApplyImmediately=True,
         MasterUserPassword='Password123'
     )
-    return {
-        'statusCode': 200,
-        'message': f"Db cluster should be modified {response}"
-    }
 
 
 def delete_db_instance(event, context):
-    response = rds_client.delete_db_instance(
+    rds_client.delete_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         SkipFinalSnapshot=True
     )
-    return {
-        'statusCode': 200,
-        'message': f"Db cluster should be deleted {response}"
-    }
 
 
 def create_db_instance(event, context):
-    response = rds_client.create_db_instance(
+    rds_client.create_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         Engine=ENGINE
     )
-    return {
-        'statusCode': 201,
-        'message': f"Db instance should be created {response}"
-    }
-
-
-def delete_bucket(event, context):
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket('my-bucket')
-    bucket.objects.all().delete()
-    client = boto3.client('s3')
-    response = client.delete_bucket(
-        Bucket=DEST_BUCKET
-    )
 
 
 def copy_s3(event, context):
-    # TODO modify aqts-capture-trigger to have a fake trigger bucket that works the same
-    # as the real trigger bucket (name: aqts-retriever-capture-load)
-
-    s3_client = boto3.client('s3')
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
         keys.append(obj['Key'])
 
     s3_resource = boto3.resource('s3')
-    count = 0
     for key in keys:
         copy_source = {
             'Bucket': SRC_BUCKET,
@@ -112,20 +85,21 @@ def copy_s3(event, context):
         }
         bucket = s3_resource.Bucket(DEST_BUCKET)
         bucket.copy(copy_source, key)
-        count = count + 1
-    return {
-        'statusCode': 200,
-        'message': f"copy_s3 copied {count} objects"
-    }
 
 
 def restore_db_cluster(event, context):
-    logger.debug(f"event: {event}")
+    """
+    By default we try to restore the production snapshot that
+    is two days old.  If a specific snapshot needs to be used
+    for the test, it can be passed in as part of an event when
+    the step function is invoked with the key 'snapshotIdentifier'.
+    """
+
     my_snapshot_identifier = SNAPSHOT_IDENTIFIER
     if event is not None:
         if event.get("snapshotIdentifier") is not None:
             my_snapshot_identifier = event.get("snapshotIdentifier")
-            
+
     response = rds_client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SnapshotIdentifier=my_snapshot_identifier,
@@ -144,17 +118,12 @@ def restore_db_cluster(event, context):
             'sg-d0d1feaf',
         ],
     )
-    return {
-        'statusCode': 201,
-        'message': f"Db cluster should be restored {response}"
-    }
 
 
 def falsify_secrets(event, context):
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
-    logger.info(f"secrets before falsify: {original['SecretString']}")
     secret_string = json.loads(original['SecretString'])
     secret_string['TEST_BUCKET'] = DEST_BUCKET
     orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
@@ -163,7 +132,6 @@ def falsify_secrets(event, context):
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
     secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
-    logger.info(f"secrets after falsify: {secret_string}")
 
     secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
 
@@ -186,31 +154,23 @@ def restore_secrets(event, context):
     secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
 
 
-
 def disable_trigger(event, context):
-    logger.debug("trying to disable trigger")
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
-            # lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
-            returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
-            logger.debug(f"Trigger should be disabled.  function name: {function_name} item: {returned}")
+            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
     return True
 
 
 def enable_trigger(event, context):
-    logger.debug("trying to enable trigger")
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-            returned = lambda_client.get_event_source_mapping(UUID=item['UUID'])
-            logger.debug(f"Trigger should be enabled.  function name: {function_name} item: {returned}")
     return True
 
 
 def add_trigger_to_bucket(event, context):
-    s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
     my_queue_url = ""
@@ -218,13 +178,11 @@ def add_trigger_to_bucket(event, context):
     for url in response['QueueUrls']:
         if "aqts-capture-trigger-queue-TEST" in url:
             my_queue_url = url
-    logger.info(f"using {my_queue_url}")
     response = sqs_client.get_queue_attributes(
         QueueUrl=my_queue_url,
         AttributeNames=['QueueArn']
     )
     my_queue_arn = response['Attributes']['QueueArn']
-    logger.info(f"MY QUEUE ARN: {my_queue_arn}")
 
     response = bucket_notification.put(
         NotificationConfiguration={
@@ -239,11 +197,9 @@ def add_trigger_to_bucket(event, context):
         }
     )
     bucket_notification.load()
-    logger.info(f"response {response}")
 
 
 def remove_trigger_from_bucket(event, context):
-    s3 = boto3.resource('s3')
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
     my_queue_url = ""
@@ -251,13 +207,6 @@ def remove_trigger_from_bucket(event, context):
     for url in response['QueueUrls']:
         if "aqts-capture-trigger-queue-TEST" in url:
             my_queue_url = url
-    logger.info(f"using {my_queue_url}")
-    response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url,
-        AttributeNames=['QueueArn']
-    )
-    my_queue_arn = response['Attributes']['QueueArn']
-    logger.info(f"MY QUEUE ARN: {my_queue_arn}")
 
     response = bucket_notification.put(
         NotificationConfiguration={
@@ -266,7 +215,6 @@ def remove_trigger_from_bucket(event, context):
         }
     )
     bucket_notification.load()
-    logger.info(f"response {response}")
 
 
 def run_integration_tests(event, context):
@@ -274,14 +222,11 @@ def run_integration_tests(event, context):
         SecretId=NWCAPTURE_TEST,
     )
     secret_string = json.loads(original['SecretString'])
-    logger.info(f"secrets {secret_string}")
-    os.environ['DB_HOST'] = secret_string['DATABASE_ADDRESS']
-    os.environ['DB_USER'] = secret_string['SCHEMA_OWNER_USERNAME']
-    os.environ['DB_NAME'] = secret_string['DATABASE_NAME']
-    os.environ['DB_PASSWORD'] = secret_string['SCHEMA_OWNER_PASSWORD']
-    rds = RDS()
+    db_host = secret_string['DATABASE_ADDRESS']
+    db_user = secret_string['SCHEMA_OWNER_USERNAME']
+    db_name = secret_string['DATABASE_NAME']
+    db_password = secret_string['SCHEMA_OWNER_PASSWORD']
+    rds = RDS(db_host, db_user, db_name, db_password)
     sql = "select count(1) from json_data"
-    logger.info(f"run_integration_tests environment {os.environ}")
-    # TODO uncomment this
-    # result = rds.execute_sql(sql)
-    # logger.info(f"RESULT: {result}")
+    result = rds.execute_sql(sql)
+    logger.info(f"RESULT: {result}")
