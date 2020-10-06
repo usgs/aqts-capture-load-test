@@ -6,8 +6,10 @@ import logging
 
 from src.rds import RDS
 
+
+log_level = os.getenv('LOG_LEVEL', logging.ERROR)
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(log_level)
 
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
@@ -36,8 +38,8 @@ secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGIO
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
 sqs_client = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
-s3_client = boto3.client('s3')
-s3 = boto3.resource('s3')
+s3_client = boto3.client('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
+s3 = boto3.resource('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 
 
 def delete_db_cluster(event, context):
@@ -130,6 +132,9 @@ def falsify_secrets(event, context):
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
     orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
+    orig_host = str(secret_string['DB_HOST'])
+    secret_string['DATABASE_ADDRESS_BACKUP'] = orig_host
+    secret_string['DATABASE_ADDRESS'] = 'nwcapture-load.cluster-c8adwxz9sely.us-west-2.rds.amazonaws.com'
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
     secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
 
@@ -140,17 +145,16 @@ def restore_secrets(event, context):
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
-    logger.info(f"secrets before restore: {original['SecretString']}")
-
     secret_string = json.loads(original['SecretString'])
     original_username = str(secret_string['SCHEMA_OWNER_USERNAME_BACKUP'])
     original_password = str(secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'])
+    original_host = str(secret_string['DATABASE_ADDRESS_BACKUP'])
     secret_string['SCHEMA_OWNER_USERNAME'] = original_username
     secret_string['SCHEMA_OWNER_PASSWORD'] = original_password
+    secret_string['DATABASE_ADDRESS'] = original_host
     del secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
     del secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
-    logger.info(f"secrets before restore: {secret_string}")
-
+    del secret_string['DATABASE_ADDRESS_BACKUP']
     secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
 
 
