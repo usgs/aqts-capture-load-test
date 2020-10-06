@@ -132,7 +132,7 @@ def falsify_secrets(event, context):
     secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
     orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
-    orig_host = str(secret_string['DB_HOST'])
+    orig_host = str(secret_string['DATABASE_ADDRESS'])
     secret_string['DATABASE_ADDRESS_BACKUP'] = orig_host
     secret_string['DATABASE_ADDRESS'] = 'nwcapture-load.cluster-c8adwxz9sely.us-west-2.rds.amazonaws.com'
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
