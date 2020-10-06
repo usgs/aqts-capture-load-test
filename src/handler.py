@@ -6,7 +6,6 @@ import logging
 
 from src.rds import RDS
 
-
 log_level = os.getenv('LOG_LEVEL', logging.ERROR)
 logger = logging.getLogger()
 logger.setLevel(log_level)
@@ -229,7 +228,38 @@ def run_integration_tests(event, context):
     db_user = secret_string['SCHEMA_OWNER_USERNAME']
     db_name = secret_string['DATABASE_NAME']
     db_password = secret_string['SCHEMA_OWNER_PASSWORD']
+
+    logger.info(f"{db_host} {db_user} {db_name} {db_password}")
     rds = RDS(db_host, db_user, db_name, db_password)
     sql = "select count(1) from capture.json_data"
     result = rds.execute_sql(sql)
     logger.info(f"RESULT: {result}")
+
+    obj = s3.Object('iow-retriever-capture-load', 'TEST_RESULTS')
+    logger.info(f"read content from S3: {obj}")
+    content = json.loads(obj.get()['Body'].read().decode('utf-8'))
+    logger.info(f"after json loads {content}")
+    content["End Time"] = datetime.datetime.now()
+    content["End Count"] = result
+    logger.info(f"Writing this to S3 {json.dumps(content)}")
+    s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
+
+
+def pre_test(event, context):
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_TEST,
+    )
+    secret_string = json.loads(original['SecretString'])
+    db_host = secret_string['DATABASE_ADDRESS']
+    db_user = secret_string['SCHEMA_OWNER_USERNAME']
+    db_name = secret_string['DATABASE_NAME']
+    db_password = secret_string['SCHEMA_OWNER_PASSWORD']
+    logger.info(f"{db_host} {db_user} {db_name} {db_password}")
+    rds = RDS(db_host, db_user, db_name, db_password)
+    sql = "select count(1) from capture.json_data"
+    result = rds.execute_sql(sql)
+    logger.info(f"RESULT: {result}")
+
+    content = {"StartTime": datetime.datetime.now(), "StartCount": result}
+    logger.info(f"Writing this to S3 {json.dumps(content)}")
+    s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
