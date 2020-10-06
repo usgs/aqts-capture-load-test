@@ -281,5 +281,7 @@ def run_integration_tests(event, context):
     os.environ['DB_PASSWORD'] = secret_string['SCHEMA_OWNER_PASSWORD']
     rds = RDS()
     sql = "select count(1) from json_data"
-    result = rds.execute_sql(sql)
-    logger.info(f"RESULT: {result}")
+    logger.info(f"run_integration_tests environment {os.environ}")
+    # TODO uncomment this
+    # result = rds.execute_sql(sql)
+    # logger.info(f"RESULT: {result}")

@@ -3,6 +3,8 @@ This module manages persisting data from a message into the RDS Resource.
 """
 
 # the postgresql connection module
+import os
+
 from psycopg2 import connect
 from psycopg2 import OperationalError, DataError, IntegrityError
 
@@ -24,15 +26,15 @@ class RDS:
         wait for 50 seconds before giving up on getting a connection
         """
         self.connection_parameters = {
-            'host': CONFIG['rds']['host'],
-            'database': CONFIG['rds']['database'],
-            'user': CONFIG['rds']['user'],
-            'password': CONFIG['rds']['password'],
+            'host': os.environ['DB_HOST'],
+            'database': os.environ['DATABASE_NAME'],
+            'user': os.environ['DB_USER'],
+            'password': os.environ['DB_PASSWORD'],
             'connect_timeout': connect_timeout
             # keyword argument from https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
         }
-
-        logger.debug("created RDS instance %s" % self.connection_parameters)
+        logger.info(f"OS ENVIRON= {os.environ}")
+        logger.info("created RDS instance %s" % self.connection_parameters)
         self.conn, self.cursor = self._connect()
 
     def _connect(self):
