@@ -154,12 +154,17 @@ def falsify_secrets(event, context):
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
+    logger.info(f"secrets before falsify: {original['SecretString']}")
     secret_string = json.loads(original['SecretString'])
     secret_string['TEST_BUCKET'] = DEST_BUCKET
-    secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = secret_string['SCHEMA_OWNER_USERNAME']
-    secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = secret_string['SCHEMA_OWNER_PASSWORD']
+    orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
+    secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
+    orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
+    secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
     secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
     secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
+    logger.info(f"secrets after falsify: {secret_string}")
+
     secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
 
 
@@ -167,13 +172,19 @@ def restore_secrets(event, context):
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
+    logger.info(f"secrets before restore: {original['SecretString']}")
+
     secret_string = json.loads(original['SecretString'])
-    del secret_string['TEST_BUCKET']
-    secret_string['SCHEMA_OWNER_USERNAME'] = secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
-    secret_string['SCHEMA_OWNER_PASSWORD'] = secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
+    original_username = str(secret_string['SCHEMA_OWNER_USERNAME_BACKUP'])
+    original_password = str(secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'])
+    secret_string['SCHEMA_OWNER_USERNAME'] = original_username
+    secret_string['SCHEMA_OWNER_PASSWORD'] = original_password
     del secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
     del secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
+    logger.info(f"secrets before restore: {secret_string}")
+
     secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
+
 
 
 def disable_trigger(event, context):
