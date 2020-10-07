@@ -136,41 +136,6 @@ def restore_db_cluster(event, context):
     )
 
 
-def falsify_secrets(event, context):
-    original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_TEST,
-    )
-    secret_string = json.loads(original['SecretString'])
-    orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
-    secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
-    orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
-    secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
-    orig_host = str(secret_string['DATABASE_ADDRESS'])
-    secret_string['DATABASE_ADDRESS_BACKUP'] = orig_host
-    secret_string['DATABASE_ADDRESS'] = 'nwcapture-load.cluster-c8adwxz9sely.us-west-2.rds.amazonaws.com'
-    secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
-    secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
-
-    secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
-
-
-def restore_secrets(event, context):
-    original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_TEST,
-    )
-    secret_string = json.loads(original['SecretString'])
-    original_username = str(secret_string['SCHEMA_OWNER_USERNAME_BACKUP'])
-    original_password = str(secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'])
-    original_host = str(secret_string['DATABASE_ADDRESS_BACKUP'])
-    secret_string['SCHEMA_OWNER_USERNAME'] = original_username
-    secret_string['SCHEMA_OWNER_PASSWORD'] = original_password
-    secret_string['DATABASE_ADDRESS'] = original_host
-    del secret_string['SCHEMA_OWNER_USERNAME_BACKUP']
-    del secret_string['SCHEMA_OWNER_PASSWORD_BACKUP']
-    del secret_string['DATABASE_ADDRESS_BACKUP']
-    secrets_client.update_secret(SecretId=NWCAPTURE_TEST, SecretString=json.dumps(secret_string))
-
-
 def disable_trigger(event, context):
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
@@ -280,36 +245,58 @@ def pre_test(event, context):
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
 
-def modify_env_variables(event, context):
-    response = secrets_client.create_secret(
-        Name=NWCAPTURE_LOAD
-    )
+def falsify_secrets(event, context):
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_TEST,
+         SecretId=NWCAPTURE_LOAD
     )
     secret_string = json.loads(original['SecretString'])
-    secrets_client.update_secret(SecretId=NWCAPTURE_LOAD, SecretString=json.dumps(secret_string))
-
-    # original = secrets_client.get_secret_value(
-    #     SecretId=NWCAPTURE_LOAD
-    # )
-    # secret_string = json.loads(original['SecretString'])
-    # orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
-    # secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
-    # orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
-    # secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
-    # orig_host = str(secret_string['DATABASE_ADDRESS'])
-    # secret_string['DATABASE_ADDRESS_BACKUP'] = orig_host
-    # secret_string['DATABASE_ADDRESS'] = 'nwcapture-load.cluster-c8adwxz9sely.us-west-2.rds.amazonaws.com'
-    # secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
-    # secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
+    db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
+    db_address = str(secret_string['DATABASE_ADDRESS'])
+    logger.info(f"db_address {db_address} db_password {db_password}")
     #
     # for lambda_function in LAMBDA_FUNCTIONS:
     #     response = lambda_client.update_function_configuration(
     #         FunctionName=lambda_function,
     #         Environment={
     #             'Variables': {
-    #                 'env_var': 'hello'
+    #                 'SCHEMA_OWNER_PASSWORD': db_password,
+    #                 'DATABASE_ADDRESS': db_address
     #             }
     #         }
     #     )
+
+
+def restore_secrets(event, context):
+    original = secrets_client.get_secret_value(
+         SecretId=NWCAPTURE_TEST
+    )
+    secret_string = json.loads(original['SecretString'])
+    db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
+    db_address = str(secret_string['DATABASE_ADDRESS'])
+    logger.info(f"db_address {db_address} db_password {db_password}")
+    #
+    # for lambda_function in LAMBDA_FUNCTIONS:
+    #     response = lambda_client.update_function_configuration(
+    #         FunctionName=lambda_function,
+    #         Environment={
+    #             'Variables': {
+    #                 'SCHEMA_OWNER_PASSWORD': db_password,
+    #                 'DATABASE_ADDRESS': db_address
+    #             }
+    #         }
+    #     )
+
+
+def modify_schema_owner_password(event, context):
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_LOAD,
+    )
+    secret_string = json.loads(original['SecretString'])
+    db_host = secret_string['DATABASE_ADDRESS']
+    db_name = secret_string['DATABASE_NAME']
+
+    logger.info(f"{db_host} {db_name}")
+    rds = RDS(db_host, 'postgres', db_name, 'Password123')
+    sql = "alter user capture_owner with password 'Password123'"
+    result = rds.execute_sql(sql)
+    logger.info(f"RESULT: {result}")
