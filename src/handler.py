@@ -336,7 +336,7 @@ def falsify_secrets(event, context):
             FunctionName=lambda_function
         )
         my_env_variables = response['Environment']['Variables']
-        logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
+        logger.info(f"BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
         if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
             my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
         elif my_env_variables.get("TRANSFORM_SCHEMA_OWNER_PASSWORD") is not None:
@@ -345,7 +345,7 @@ def falsify_secrets(event, context):
             my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
         elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
             my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
-        logger.info("AFTER function {lambda_function} my_env_variables= {my_env_variables}")
+        logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
         # lambda_client.update_function_configuration(
         #     FunctionName=lambda_function,
@@ -371,7 +371,7 @@ def restore_secrets(event, context):
             FunctionName=lambda_function
         )
         my_env_variables = response['Environment']['Variables']
-        logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
+        logger.info(f"BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
         if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
             my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
         elif my_env_variables.get("TRANSFORM_SCHEMA_OWNER_PASSWORD") is not None:
@@ -380,7 +380,7 @@ def restore_secrets(event, context):
             my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
         elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
             my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
-        logger.info("AFTER function {lambda_function} my_env_variables= {my_env_variables}")
+        logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
         # lambda_client.update_function_configuration(
         #     FunctionName=lambda_function,
