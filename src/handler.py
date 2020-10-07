@@ -12,6 +12,9 @@ logger.setLevel(log_level)
 
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
+"""
+This is supposed to be all lambda functions invoked by the state machine.
+"""
 LAMBDA_FUNCTIONS = [
     'aqts-capture-raw-load-TEST-iowCapture',
     'aqts-ts-type-router-TEST-determineRoute',
@@ -64,6 +67,14 @@ def delete_db_cluster(event, context):
 
 
 def modify_db_cluster(event, context):
+    """
+    When we restore the database from a production snapshot,
+    we don't know the passwords.  So, modify the postgres password here
+    so we can work with the database.
+    :param event:
+    :param context:
+    :return:
+    """
     rds_client.modify_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         ApplyImmediately=True,
@@ -88,6 +99,13 @@ def create_db_instance(event, context):
 
 
 def copy_s3(event, context):
+    """
+    Copy files from the 'reference' bucket to the trigger bucket to simulate
+    a full run.
+    :param event:
+    :param context:
+    :return:
+    """
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
@@ -109,6 +127,8 @@ def restore_db_cluster(event, context):
     is two days old.  If a specific snapshot needs to be used
     for the test, it can be passed in as part of an event when
     the step function is invoked with the key 'snapshotIdentifier'.
+
+    Restoring an aurora db cluster from snapshot is dog slow and takes one to two hours.
     """
 
     my_snapshot_identifier = SNAPSHOT_IDENTIFIER
@@ -253,17 +273,17 @@ def falsify_secrets(event, context):
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
     logger.info(f"db_address {db_address} db_password {db_password}")
-    #
-    # for lambda_function in LAMBDA_FUNCTIONS:
-    #     response = lambda_client.update_function_configuration(
-    #         FunctionName=lambda_function,
-    #         Environment={
-    #             'Variables': {
-    #                 'SCHEMA_OWNER_PASSWORD': db_password,
-    #                 'DATABASE_ADDRESS': db_address
-    #             }
-    #         }
-    #     )
+
+    for lambda_function in LAMBDA_FUNCTIONS:
+        lambda_client.update_function_configuration(
+            FunctionName=lambda_function,
+            Environment={
+                'Variables': {
+                    'SCHEMA_OWNER_PASSWORD': db_password,
+                    'DATABASE_ADDRESS': db_address
+                }
+            }
+        )
 
 
 def restore_secrets(event, context):
@@ -273,18 +293,17 @@ def restore_secrets(event, context):
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
-    logger.info(f"db_address {db_address} db_password {db_password}")
-    #
-    # for lambda_function in LAMBDA_FUNCTIONS:
-    #     response = lambda_client.update_function_configuration(
-    #         FunctionName=lambda_function,
-    #         Environment={
-    #             'Variables': {
-    #                 'SCHEMA_OWNER_PASSWORD': db_password,
-    #                 'DATABASE_ADDRESS': db_address
-    #             }
-    #         }
-    #     )
+
+    for lambda_function in LAMBDA_FUNCTIONS:
+        lambda_client.update_function_configuration(
+            FunctionName=lambda_function,
+            Environment={
+                'Variables': {
+                    'SCHEMA_OWNER_PASSWORD': db_password,
+                    'DATABASE_ADDRESS': db_address
+                }
+            }
+        )
 
 
 def modify_schema_owner_password(event, context):
@@ -294,9 +313,6 @@ def modify_schema_owner_password(event, context):
     secret_string = json.loads(original['SecretString'])
     db_host = secret_string['DATABASE_ADDRESS']
     db_name = secret_string['DATABASE_NAME']
-
-    logger.info(f"{db_host} {db_name}")
     rds = RDS(db_host, 'postgres', db_name, 'Password123')
     sql = "alter user capture_owner with password 'Password123'"
-    result = rds.execute_sql(sql)
-    logger.info(f"RESULT: {result}")
+    result = rds.alter_permissions(sql)

@@ -51,3 +51,10 @@ class RDS:
         except (OperationalError, DataError, IntegrityError) as e:
             logger.debug(f'Error during SQL execution: {repr(e)}', exc_info=True)
             self.conn.rollback()
+
+    def alter_permissions(self, sql):
+        try:
+            self.cursor.execute(sql)
+        except (OperationalError, DataError, IntegrityError) as e:
+            logger.debug(f'Error during SQL execution: {repr(e)}', exc_info=True)
+            self.conn.rollback()
