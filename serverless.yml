@@ -180,7 +180,7 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: DisableLoadTrigger
+        StartAt: DisableTrigger
         States:
           DisableTrigger:
             Type: Task
