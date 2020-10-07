@@ -12,6 +12,20 @@ logger.setLevel(log_level)
 
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
+LAMBDA_FUNCTIONS = [
+    'aqts-capture-raw-load-TEST-iowCapture',
+    'aqts-ts-type-router-TEST-determineRoute',
+    'aqts-capture-ts-description-TEST-processTsDescription',
+    'aqts-capture-ts-corrected-TEST-preProcess',
+    'aqts-capture-ts-field-visit-TEST-preProcess',
+    'aqts-capture-field-visit-metadata-TEST-preProcess',
+    'aqts-capture-field-visit-transform-TEST-transform',
+    'aqts-capture-discrete-loader-TEST-loadDiscrete',
+    'aqts-capture-dvstat-transform-TEST-transform',
+    'aqts-capture-ts-loader-TEST-loadTimeSeries',
+    'aqts-capture-error-handler-TEST-aqtsErrorHandler'
+]
+
 month = str(two_days_ago.month)
 if len(month) == 1:
     month = f"0{month}"
@@ -29,6 +43,7 @@ DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_TEST = 'NWCAPTURE-DB-TEST'
+NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
 
 TEST_LAMBDA_TRIGGERS = [
     'aqts-capture-trigger-TEST-aqtsCaptureTrigger', 'aqts-capture-trigger-tmp-TEST-aqtsCaptureTrigger']
@@ -266,47 +281,35 @@ def pre_test(event, context):
 
 
 def modify_env_variables(event, context):
-    response = lambda_client.get_function_configuration(
-        FunctionName='aqts-capture-ts-corrected-TEST-preProcess'
+    response = secrets_client.create_secret(
+        Name=NWCAPTURE_LOAD
     )
-    logger.info(f"orig function config: {response}")
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_TEST,
+    )
+    secret_string = json.loads(original['SecretString'])
+    secrets_client.update_secret(SecretId=NWCAPTURE_LOAD, SecretString=json.dumps(secret_string))
 
-    # response = lambda_client.update_function_configuration(
-    #     FunctionName='string',
-    #     Role='string',
-    #     Handler='string',
-    #     Description='string',
-    #     Timeout=123,
-    #     MemorySize=123,
-    #     VpcConfig={
-    #         'SubnetIds': [
-    #             'string',
-    #         ],
-    #         'SecurityGroupIds': [
-    #             'string',
-    #         ]
-    #     },
-    #     Environment={
-    #         'Variables': {
-    #             'string': 'string'
-    #         }
-    #     },
-    #     Runtime='nodejs' | 'nodejs4.3' | 'nodejs6.10' | 'nodejs8.10' | 'nodejs10.x' | 'nodejs12.x' | 'java8' | 'java8.al2' | 'java11' | 'python2.7' | 'python3.6' | 'python3.7' | 'python3.8' | 'dotnetcore1.0' | 'dotnetcore2.0' | 'dotnetcore2.1' | 'dotnetcore3.1' | 'nodejs4.3-edge' | 'go1.x' | 'ruby2.5' | 'ruby2.7' | 'provided' | 'provided.al2',
-    #     DeadLetterConfig={
-    #         'TargetArn': 'string'
-    #     },
-    #     KMSKeyArn='string',
-    #     TracingConfig={
-    #         'Mode': 'Active' | 'PassThrough'
-    #     },
-    #     RevisionId='string',
-    #     Layers=[
-    #         'string',
-    #     ],
-    #     FileSystemConfigs=[
-    #         {
-    #             'Arn': 'string',
-    #             'LocalMountPath': 'string'
-    #         },
-    #     ]
+    # original = secrets_client.get_secret_value(
+    #     SecretId=NWCAPTURE_LOAD
     # )
+    # secret_string = json.loads(original['SecretString'])
+    # orig_username = str(secret_string['SCHEMA_OWNER_USERNAME'])
+    # secret_string['SCHEMA_OWNER_USERNAME_BACKUP'] = orig_username
+    # orig_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
+    # secret_string['SCHEMA_OWNER_PASSWORD_BACKUP'] = orig_password
+    # orig_host = str(secret_string['DATABASE_ADDRESS'])
+    # secret_string['DATABASE_ADDRESS_BACKUP'] = orig_host
+    # secret_string['DATABASE_ADDRESS'] = 'nwcapture-load.cluster-c8adwxz9sely.us-west-2.rds.amazonaws.com'
+    # secret_string['SCHEMA_OWNER_USERNAME'] = "postgres"
+    # secret_string['SCHEMA_OWNER_PASSWORD'] = "Password123"
+    #
+    # for lambda_function in LAMBDA_FUNCTIONS:
+    #     response = lambda_client.update_function_configuration(
+    #         FunctionName=lambda_function,
+    #         Environment={
+    #             'Variables': {
+    #                 'env_var': 'hello'
+    #             }
+    #         }
+    #     )
