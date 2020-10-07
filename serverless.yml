@@ -218,6 +218,12 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [preTest, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 600
+                MaxAttempts: 10
+                BackoffRate: 1
             Next: CopyS3
           CopyS3:
             Type: Task
