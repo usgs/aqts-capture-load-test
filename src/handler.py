@@ -293,14 +293,17 @@ def restore_secrets(event, context):
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
-
+    db_user = str(secret_string['SCHEMA_OWNER_USERNAME'])
+    db_port = str(secret_string['DATABASE_PORT'])
     for lambda_function in LAMBDA_FUNCTIONS:
         lambda_client.update_function_configuration(
             FunctionName=lambda_function,
             Environment={
                 'Variables': {
                     'SCHEMA_OWNER_PASSWORD': db_password,
-                    'DATABASE_ADDRESS': db_address
+                    'DATABASE_ADDRESS': db_address,
+                    'SCHEMA_OWNER_USERNAME': db_user,
+                    'DATABASE_PORT': db_port
                 }
             }
         )
