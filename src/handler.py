@@ -309,10 +309,19 @@ def falsify_secrets(event, context):
     """
     Todo replace lambda environment variables for password and db address
     while leaving others untouched.
+
+    1. call lambda_client.get_function_configuration() to get original env variables
+    2. call secrets_client.get_secret_value() to get the secrets we want to change
+    3. replace the env variable for "AQTS_SCHEMA_OWNER_PASSWORD" or "TRANSFORM_SCHEMA_OWNER_PASSWORD"
+       with the new password
+    4. replace the env variable for "AQTS_DATABASE_ADDRESS" or "TRANSFORM_DATABASE_ADDRESS"
+       with the new database address
+    5. update the environment variables
     :param event:
     :param context:
     :return:
     """
+
     original = secrets_client.get_secret_value(
          SecretId=NWCAPTURE_LOAD
     )
@@ -322,44 +331,65 @@ def falsify_secrets(event, context):
     logger.info(f"db_address {db_address} db_password {db_password}")
 
     for lambda_function in LAMBDA_FUNCTIONS:
-        lambda_client.update_function_configuration(
-            FunctionName=lambda_function,
-            Environment={
-                'Variables': {
-                    'SCHEMA_OWNER_PASSWORD': db_password,
-                    'DATABASE_ADDRESS': db_address
-                }
-            }
+        # 1.
+        response = lambda_client.get_function_configuration(
+            FunctionName='string',
+            Qualifier='string'
         )
+        my_env_variables = json.loads(response['Environment']['Variables'])
+        logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
+        if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
+            my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
+        elif my_env_variables.get("TRANSFORM_SCHEMA_OWNER_PASSWORD") is not None:
+            my_env_variables["TRANSFORM_SCHEMA_OWNER_PASSWORD"] = db_password
+        if my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+            my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
+        elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+            my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
+        logger.info("AFTER function {lambda_function} my_env_variables= {my_env_variables}")
+
+        # lambda_client.update_function_configuration(
+        #     FunctionName=lambda_function,
+        #     Environment={
+        #         'Variables': my_env_variables
+        #     }
+        # )
 
 
 def restore_secrets(event, context):
-    """
-    Todo restore all lambda variables to the way they were originally
-    :param event:
-    :param context:
-    :return:
-    """
+
     original = secrets_client.get_secret_value(
          SecretId=NWCAPTURE_TEST
     )
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
-    db_user = str(secret_string['SCHEMA_OWNER_USERNAME'])
-    db_port = str(secret_string['DATABASE_PORT'])
+    logger.info(f"db_address {db_address} db_password {db_password}")
+
     for lambda_function in LAMBDA_FUNCTIONS:
-        lambda_client.update_function_configuration(
-            FunctionName=lambda_function,
-            Environment={
-                'Variables': {
-                    'SCHEMA_OWNER_PASSWORD': db_password,
-                    'DATABASE_ADDRESS': db_address,
-                    'SCHEMA_OWNER_USERNAME': db_user,
-                    'DATABASE_PORT': db_port
-                }
-            }
+        # 1.
+        response = lambda_client.get_function_configuration(
+            FunctionName='string',
+            Qualifier='string'
         )
+        my_env_variables = json.loads(response['Environment']['Variables'])
+        logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
+        if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
+            my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
+        elif my_env_variables.get("TRANSFORM_SCHEMA_OWNER_PASSWORD") is not None:
+            my_env_variables["TRANSFORM_SCHEMA_OWNER_PASSWORD"] = db_password
+        if my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+            my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
+        elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+            my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
+        logger.info("AFTER function {lambda_function} my_env_variables= {my_env_variables}")
+
+        # lambda_client.update_function_configuration(
+        #     FunctionName=lambda_function,
+        #     Environment={
+        #         'Variables': my_env_variables
+        #     }
+        # )
 
 
 def modify_schema_owner_password(event, context):
