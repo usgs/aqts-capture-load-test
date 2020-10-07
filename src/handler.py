@@ -333,8 +333,7 @@ def falsify_secrets(event, context):
     for lambda_function in LAMBDA_FUNCTIONS:
         # 1.
         response = lambda_client.get_function_configuration(
-            FunctionName='string',
-            Qualifier='string'
+            FunctionName=lambda_function
         )
         my_env_variables = json.loads(response['Environment']['Variables'])
         logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
@@ -367,10 +366,9 @@ def restore_secrets(event, context):
     logger.info(f"db_address {db_address} db_password {db_password}")
 
     for lambda_function in LAMBDA_FUNCTIONS:
-        # 1.
+
         response = lambda_client.get_function_configuration(
-            FunctionName='string',
-            Qualifier='string'
+            FunctionName=lambda_function
         )
         my_env_variables = json.loads(response['Environment']['Variables'])
         logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
