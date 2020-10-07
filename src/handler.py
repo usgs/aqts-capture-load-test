@@ -343,8 +343,12 @@ def falsify_secrets(event, context):
             my_env_variables["TRANSFORM_SCHEMA_OWNER_PASSWORD"] = db_password
         if my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
             my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
-        elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+        elif my_env_variables.get("TRANSFORM_DATABASE_ADDRESS") is not None:
             my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
+        if my_env_variables.get("DB_PASSWORD") is not None:
+            my_env_variables["DB_PASSWORD"] = db_password
+        if my_env_variables.get("DB_HOST") is not None:
+            my_env_variables["DB_HOST"] = db_address
         logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
         # lambda_client.update_function_configuration(
@@ -378,8 +382,13 @@ def restore_secrets(event, context):
             my_env_variables["TRANSFORM_SCHEMA_OWNER_PASSWORD"] = db_password
         if my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
             my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
-        elif my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
+        elif my_env_variables.get("TRANSFORM_DATABASE_ADDRESS") is not None:
             my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
+        if my_env_variables.get("DB_PASSWORD") is not None:
+            my_env_variables["DB_PASSWORD"] = db_password
+        if my_env_variables.get("DB_HOST") is not None:
+            my_env_variables["DB_HOST"] = db_address
+
         logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
         # lambda_client.update_function_configuration(
