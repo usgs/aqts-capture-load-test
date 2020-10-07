@@ -194,8 +194,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 600
-                MaxAttempts: 10
+                IntervalSeconds: 900
+                MaxAttempts: 12
                 BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
@@ -205,8 +205,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 600
-                MaxAttempts: 10
+                IntervalSeconds: 900
+                MaxAttempts: 12
                 BackoffRate: 1
             Next: AddTriggerToTestBucket
           AddTriggerToTestBucket:
@@ -247,7 +247,7 @@ stepFunctions:
               - ErrorEquals:
                   - States.ALL
                 IntervalSeconds: 900
-                MaxAttempts: 8
+                MaxAttempts: 12
                 BackoffRate: 1
             Next: DeleteDbCluster
           DeleteDbCluster:
