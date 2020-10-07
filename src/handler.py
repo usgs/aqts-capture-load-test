@@ -267,8 +267,7 @@ def pre_test(event, context):
 
 def modify_env_variables(event, context):
     response = lambda_client.get_function_configuration(
-        FunctionName='string',
-        Qualifier='string'
+        FunctionName='aqts-capture-ts-corrected-TEST-preProcess'
     )
     logger.info(f"orig function config: {response}")
 
