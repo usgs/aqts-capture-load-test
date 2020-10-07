@@ -263,3 +263,51 @@ def pre_test(event, context):
     content = {"StartTime": datetime.datetime.now(), "StartCount": result}
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
+
+
+def modify_env_variables(event, context):
+    response = lambda_client.get_function_configuration(
+        FunctionName='string',
+        Qualifier='string'
+    )
+    logger.info(f"orig function config: {response}")
+
+    # response = lambda_client.update_function_configuration(
+    #     FunctionName='string',
+    #     Role='string',
+    #     Handler='string',
+    #     Description='string',
+    #     Timeout=123,
+    #     MemorySize=123,
+    #     VpcConfig={
+    #         'SubnetIds': [
+    #             'string',
+    #         ],
+    #         'SecurityGroupIds': [
+    #             'string',
+    #         ]
+    #     },
+    #     Environment={
+    #         'Variables': {
+    #             'string': 'string'
+    #         }
+    #     },
+    #     Runtime='nodejs' | 'nodejs4.3' | 'nodejs6.10' | 'nodejs8.10' | 'nodejs10.x' | 'nodejs12.x' | 'java8' | 'java8.al2' | 'java11' | 'python2.7' | 'python3.6' | 'python3.7' | 'python3.8' | 'dotnetcore1.0' | 'dotnetcore2.0' | 'dotnetcore2.1' | 'dotnetcore3.1' | 'nodejs4.3-edge' | 'go1.x' | 'ruby2.5' | 'ruby2.7' | 'provided' | 'provided.al2',
+    #     DeadLetterConfig={
+    #         'TargetArn': 'string'
+    #     },
+    #     KMSKeyArn='string',
+    #     TracingConfig={
+    #         'Mode': 'Active' | 'PassThrough'
+    #     },
+    #     RevisionId='string',
+    #     Layers=[
+    #         'string',
+    #     ],
+    #     FileSystemConfigs=[
+    #         {
+    #             'Arn': 'string',
+    #             'LocalMountPath': 'string'
+    #         },
+    #     ]
+    # )
