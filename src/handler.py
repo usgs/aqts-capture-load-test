@@ -335,7 +335,7 @@ def falsify_secrets(event, context):
         response = lambda_client.get_function_configuration(
             FunctionName=lambda_function
         )
-        my_env_variables = json.loads(response['Environment']['Variables'])
+        my_env_variables = response['Environment']['Variables']
         logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
         if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
             my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
@@ -370,7 +370,7 @@ def restore_secrets(event, context):
         response = lambda_client.get_function_configuration(
             FunctionName=lambda_function
         )
-        my_env_variables = json.loads(response['Environment']['Variables'])
+        my_env_variables = response['Environment']['Variables']
         logger.info("BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
         if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
             my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
