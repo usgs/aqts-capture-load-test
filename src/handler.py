@@ -157,6 +157,12 @@ def restore_db_cluster(event, context):
 
 
 def disable_trigger(event, context):
+    """
+    Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
+    :param event:
+    :param context:
+    :return:
+    """
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
@@ -165,6 +171,12 @@ def disable_trigger(event, context):
 
 
 def enable_trigger(event, context):
+    """
+    Enable the trigger on the real bucket (after test, restoring things to normal).
+    :param event:
+    :param context:
+    :return:
+    """
     for function_name in TEST_LAMBDA_TRIGGERS:
         response = lambda_client.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
@@ -173,6 +185,12 @@ def enable_trigger(event, context):
 
 
 def add_trigger_to_bucket(event, context):
+    """
+    Attach the trigger to the load test bucket.
+    :param event:
+    :param context:
+    :return:
+    """
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
     my_queue_url = ""
@@ -202,6 +220,12 @@ def add_trigger_to_bucket(event, context):
 
 
 def remove_trigger_from_bucket(event, context):
+    """
+    Disconnect the trigger from the load test bucket.
+    :param event:
+    :param context:
+    :return:
+    """
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
     my_queue_url = ""
@@ -220,6 +244,15 @@ def remove_trigger_from_bucket(event, context):
 
 
 def run_integration_tests(event, context):
+    """
+    Integration tests will go here.  Right now the idea is that the pre-test
+    will save a TEST_RESULT object up in the bucket and that the integration tests will
+    write to that same object, so when everything finishes it will be like a report.
+    That's just a placeholder idea.
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
@@ -246,6 +279,13 @@ def run_integration_tests(event, context):
 
 
 def pre_test(event, context):
+    """
+    This is a place holder that will inspect the beginning state of the load test db
+    and save some data so that it can be compared with the db after the integration tests run
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_TEST,
     )
@@ -266,6 +306,13 @@ def pre_test(event, context):
 
 
 def falsify_secrets(event, context):
+    """
+    Todo replace lambda environment variables for password and db address
+    while leaving others untouched.
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
          SecretId=NWCAPTURE_LOAD
     )
@@ -287,6 +334,12 @@ def falsify_secrets(event, context):
 
 
 def restore_secrets(event, context):
+    """
+    Todo restore all lambda variables to the way they were originally
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
          SecretId=NWCAPTURE_TEST
     )
@@ -310,6 +363,14 @@ def restore_secrets(event, context):
 
 
 def modify_schema_owner_password(event, context):
+    """
+    We don't know the password for 'capture_owner' on the production db,
+    but we have already changed the postgres password in the modifyDbCluster step.
+    So change the password for 'capture_owner' here.
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_LOAD,
     )
