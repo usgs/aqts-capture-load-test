@@ -220,8 +220,7 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
-            Next:
-              ModifySchemaOwnerPassword
+            Next: ModifySchemaOwnerPassword
           ModifySchemaOwnerPassword:
             Type: Task
             Resource:
@@ -279,21 +278,21 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [deleteDbCluster, Arn]
-            Next: RemoveTriggerFromTestBucket
-          RemoveTriggerFromTestBucket:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [removeTriggerFromBucket, Arn]
-            Next: RestoreSecrets
-          RestoreSecrets:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [restoreSecrets, Arn]
-            Next: EnableTrigger
-          EnableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [enableTrigger, Arn]
+#            Next: RemoveTriggerFromTestBucket
+#          RemoveTriggerFromTestBucket:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [removeTriggerFromBucket, Arn]
+#            Next: RestoreSecrets
+#          RestoreSecrets:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [restoreSecrets, Arn]
+#            Next: EnableTrigger
+#          EnableTrigger:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [enableTrigger, Arn]
             End: true
 
 plugins:
