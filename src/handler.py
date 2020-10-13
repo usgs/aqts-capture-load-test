@@ -12,6 +12,11 @@ log_level = os.getenv('LOG_LEVEL', logging.ERROR)
 logger = logging.getLogger()
 logger.setLevel(log_level)
 
+DB = {
+    "TEST": 'nwcapture-test',
+    "QA": 'nwcapture-qa'
+}
+
 """
 This is supposed to be all lambda functions invoked by the state machine.
 """
@@ -180,15 +185,21 @@ def disable_trigger(event, context):
 
 def enable_trigger(event, context):
     """
-    Enable the trigger on the real bucket (after test, restoring things to normal).
+    Enable the trigger on the real bucket (after test, restoring things to normal)
+    if the real db is on.
     :param event:
     :param context:
     :return:
     """
-    response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-    for item in response['EventSourceMappings']:
-        lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-    return True
+    active_dbs = _describe_db_clusters('stop')
+    if DB[stage] in active_dbs:
+        logger.info("DB Active, going to enable trigger")
+        # response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+        # for item in response['EventSourceMappings']:
+        #     lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+        return True
+    logger.info("DB Inactive, don't enable trigger")
+    return False
 
 
 def add_trigger_to_bucket(event, context):
@@ -388,3 +399,13 @@ def _replace_secrets(secret_id):
         #         'Variables': my_env_variables
         #     }
         # )
+
+def _describe_db_clusters(action):
+    # Get all the instances
+    my_rds = boto3.client('rds', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
+    response = my_rds.describe_db_clusters()
+    all_dbs = response['DBClusters']
+    if action == "stop":
+        # Filter on the ones that are running
+        rds_cluster_identifiers = [x['DBClusterIdentifier'] for x in all_dbs if x['Status'] == 'available']
+        return rds_cluster_identifiers
