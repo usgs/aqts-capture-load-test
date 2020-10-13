@@ -48,8 +48,7 @@ DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_TEST = 'NWCAPTURE-DB-TEST'
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
 
-TEST_LAMBDA_TRIGGERS = [
-    'aqts-capture-trigger-TEST-aqtsCaptureTrigger', 'aqts-capture-trigger-tmp-TEST-aqtsCaptureTrigger']
+TEST_LAMBDA_TRIGGERS = ['aqts-capture-trigger-TEST-aqtsCaptureTrigger']
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -328,7 +327,6 @@ def falsify_secrets(event, context):
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
-    logger.info(f"db_address {db_address} db_password {db_password}")
 
     for lambda_function in LAMBDA_FUNCTIONS:
         # 1.
@@ -349,14 +347,13 @@ def falsify_secrets(event, context):
             my_env_variables["DB_PASSWORD"] = db_password
         if my_env_variables.get("DB_HOST") is not None:
             my_env_variables["DB_HOST"] = db_address
-        logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
-        # lambda_client.update_function_configuration(
-        #     FunctionName=lambda_function,
-        #     Environment={
-        #         'Variables': my_env_variables
-        #     }
-        # )
+        lambda_client.update_function_configuration(
+            FunctionName=lambda_function,
+            Environment={
+                'Variables': my_env_variables
+            }
+        )
 
 
 def restore_secrets(event, context):
@@ -367,7 +364,6 @@ def restore_secrets(event, context):
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
     db_address = str(secret_string['DATABASE_ADDRESS'])
-    logger.info(f"db_address {db_address} db_password {db_password}")
 
     for lambda_function in LAMBDA_FUNCTIONS:
 
@@ -391,12 +387,12 @@ def restore_secrets(event, context):
 
         logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
-        # lambda_client.update_function_configuration(
-        #     FunctionName=lambda_function,
-        #     Environment={
-        #         'Variables': my_env_variables
-        #     }
-        # )
+        lambda_client.update_function_configuration(
+            FunctionName=lambda_function,
+            Environment={
+                'Variables': my_env_variables
+            }
+        )
 
 
 def modify_schema_owner_password(event, context):
