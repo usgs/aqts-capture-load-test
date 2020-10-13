@@ -182,18 +182,18 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: RestoreDbCluster
+        StartAt: DisableTrigger
         States:
-#          DisableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [disableTrigger, Arn]
-#            Next: FalsifySecrets
-#          FalsifySecrets:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [falsifySecrets, Arn]
-#            Next: RestoreDbCluster
+          DisableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [disableTrigger, Arn]
+            Next: FalsifySecrets
+          FalsifySecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [falsifySecrets, Arn]
+            Next: RestoreDbCluster
           RestoreDbCluster:
             Type: Task
             Resource:
@@ -231,38 +231,37 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
+            Next: AddTriggerToTestBucket
+          AddTriggerToTestBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [addTriggerToBucket, Arn]
+            Next: PreTest
+          PreTest:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [preTest, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 600
+                MaxAttempts: 10
+                BackoffRate: 1
+            Next: CopyS3
+          CopyS3:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [copyS3, Arn]
+            Next: WaitForProcessing
+          WaitForProcessing:
+            Type: Wait
+            Seconds: 600
+            Next: RunIntegrationTests
+          RunIntegrationTests:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [runIntegrationTests, Arn]
             Next: DeleteDbInstance
-#            Next: AddTriggerToTestBucket
-#          AddTriggerToTestBucket:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [addTriggerToBucket, Arn]
-#            Next: PreTest
-#          PreTest:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [preTest, Arn]
-#            Retry:
-#              - ErrorEquals:
-#                  - States.ALL
-#                IntervalSeconds: 600
-#                MaxAttempts: 10
-#                BackoffRate: 1
-#            Next: CopyS3
-#          CopyS3:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [copyS3, Arn]
-#            Next: WaitForProcessing
-#          WaitForProcessing:
-#            Type: Wait
-#            Seconds: 600
-#            Next: RunIntegrationTests
-#          RunIntegrationTests:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [runIntegrationTests, Arn]
-#            Next: DeleteDbInstance
           DeleteDbInstance:
             Type: Task
             Resource:
@@ -278,21 +277,21 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [deleteDbCluster, Arn]
-#            Next: RemoveTriggerFromTestBucket
-#          RemoveTriggerFromTestBucket:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [removeTriggerFromBucket, Arn]
-#            Next: RestoreSecrets
-#          RestoreSecrets:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [restoreSecrets, Arn]
-#            Next: EnableTrigger
-#          EnableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [enableTrigger, Arn]
+            Next: RemoveTriggerFromTestBucket
+          RemoveTriggerFromTestBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [removeTriggerFromBucket, Arn]
+            Next: RestoreSecrets
+          RestoreSecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [restoreSecrets, Arn]
+            Next: EnableTrigger
+          EnableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enableTrigger, Arn]
             End: true
 
 plugins:
