@@ -6,7 +6,12 @@ import logging
 
 from src.rds import RDS
 
-stage = os.getenv('STAGE', 'TEST')
+"""
+As of right now, the plan is to always deploy and run on QA.  However,
+if in the future that changes, use the 'stage' variable to update everything
+so it will automatically work on other stages.
+"""
+stage = os.getenv('STAGE', 'QA')
 
 log_level = os.getenv('LOG_LEVEL', logging.ERROR)
 logger = logging.getLogger()
@@ -36,7 +41,6 @@ LAMBDA_FUNCTIONS = [
 
 # Default snapshot identifier, may be overridden by passing a custom
 # snapshot identifier in the step function event
-
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 month = str(two_days_ago.month)
 if len(month) == 1:
@@ -133,7 +137,7 @@ def restore_db_cluster(event, context):
     for the test, it can be passed in as part of an event when
     the step function is invoked with the key 'snapshotIdentifier'.
 
-    Restoring an aurora db cluster from snapshot is dog slow and takes one to two hours.
+    Restoring an aurora db cluster from snapshot takes one to two hours.
     """
 
     original = secrets_client.get_secret_value(
@@ -399,6 +403,7 @@ def _replace_secrets(secret_id):
         #         'Variables': my_env_variables
         #     }
         # )
+
 
 def _describe_db_clusters(action):
     # Get all the instances
