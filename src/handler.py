@@ -6,49 +6,50 @@ import logging
 
 from src.rds import RDS
 
+stage = os.getenv('STAGE', 'TEST')
+
 log_level = os.getenv('LOG_LEVEL', logging.ERROR)
 logger = logging.getLogger()
 logger.setLevel(log_level)
-
-two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 
 """
 This is supposed to be all lambda functions invoked by the state machine.
 """
 LAMBDA_FUNCTIONS = [
-    'aqts-capture-raw-load-TEST-iowCapture',
-    'aqts-ts-type-router-TEST-determineRoute',
-    'aqts-capture-ts-description-TEST-processTsDescription',
-    'aqts-capture-ts-corrected-TEST-preProcess',
-    'aqts-capture-ts-field-visit-TEST-preProcess',
-    'aqts-capture-field-visit-metadata-TEST-preProcess',
-    'aqts-capture-field-visit-transform-TEST-transform',
-    'aqts-capture-discrete-loader-TEST-loadDiscrete',
-    'aqts-capture-dvstat-transform-TEST-transform',
-    'aqts-capture-ts-loader-TEST-loadTimeSeries',
-    'aqts-capture-error-handler-TEST-aqtsErrorHandler'
+    f"aqts-capture-raw-load-{stage}-iowCapture",
+    f"aqts-ts-type-router-{stage}-determineRoute",
+    f"aqts-capture-ts-description-{stage}-processTsDescription",
+    f"aqts-capture-ts-corrected-{stage}-preProcess",
+    f"aqts-capture-ts-field-visit-{stage}-preProcess",
+    f"aqts-capture-field-visit-metadata-{stage}-preProcess",
+    f"aqts-capture-field-visit-transform-{stage}-transform",
+    f"aqts-capture-discrete-loader-{stage}-loadDiscrete",
+    f"aqts-capture-dvstat-transform-{stage}-transform",
+    f"aqts-capture-ts-loader-{stage}-loadTimeSeries",
+    f"aqts-capture-error-handler-{stage}-aqtsErrorHandler"
 ]
 
+# Default snapshot identifier, may be overridden by passing a custom
+# snapshot identifier in the step function event
+
+two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 month = str(two_days_ago.month)
 if len(month) == 1:
     month = f"0{month}"
 day = str(two_days_ago.day)
 if len(day) == 1:
     day = f"0{day}"
-
-# Default snapshot identifier, may be overridden by passing a custom
-# snapshot identifier in the step function event
 SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
+
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
 DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
-NWCAPTURE_TEST = 'NWCAPTURE-DB-TEST'
+NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
-
-TEST_LAMBDA_TRIGGERS = ['aqts-capture-trigger-TEST-aqtsCaptureTrigger']
+CAPTURE_TRIGGER = f"aqts-capture-trigger-queue-{stage}"
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -130,6 +131,15 @@ def restore_db_cluster(event, context):
     Restoring an aurora db cluster from snapshot is dog slow and takes one to two hours.
     """
 
+    original = secrets_client.get_secret_value(
+        SecretId=NWCAPTURE_LOAD
+    )
+    secret_string = json.loads(original['SecretString'])
+    kms_key = str(secret_string['KMS_KEY_ID'])
+    subnet_name = str(secret_string['SUBNET_NAME'])
+    vpc_security_group_id = str(secret_string['VPC_SECURITY_GROUP_ID'])
+    if not kms_key or not subnet_name or not vpc_security_group_id:
+        raise Exception(f"Missing db configuration data {secret_string}")
     my_snapshot_identifier = SNAPSHOT_IDENTIFIER
     if event is not None:
         if event.get("snapshotIdentifier") is not None:
@@ -141,16 +151,16 @@ def restore_db_cluster(event, context):
         Engine=ENGINE,
         EngineVersion='11.7',
         Port=5432,
-        DBSubnetGroupName='nwisweb-capture-rds-aurora-test-dbsubnetgroup-41wlnfwg5krt',
+        DBSubnetGroupName=subnet_name,
         DatabaseName='nwcapture-load',
         EnableIAMDatabaseAuthentication=False,
         EngineMode='provisioned',
         DBClusterParameterGroupName='aqts-capture',
         DeletionProtection=False,
         CopyTagsToSnapshot=False,
-        KmsKeyId='7654bdeb-56cd-4826-8e79-f9b8f9a53209',
+        KmsKeyId=kms_key,
         VpcSecurityGroupIds=[
-            'sg-d0d1feaf',
+            vpc_security_group_id,
         ],
     )
 
@@ -162,10 +172,9 @@ def disable_trigger(event, context):
     :param context:
     :return:
     """
-    for function_name in TEST_LAMBDA_TRIGGERS:
-        response = lambda_client.list_event_source_mappings(FunctionName=function_name)
-        for item in response['EventSourceMappings']:
-            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
+    response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+    for item in response['EventSourceMappings']:
+        lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
     return True
 
 
@@ -176,10 +185,9 @@ def enable_trigger(event, context):
     :param context:
     :return:
     """
-    for function_name in TEST_LAMBDA_TRIGGERS:
-        response = lambda_client.list_event_source_mappings(FunctionName=function_name)
-        for item in response['EventSourceMappings']:
-            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+    response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+    for item in response['EventSourceMappings']:
+        lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
     return True
 
 
@@ -195,7 +203,7 @@ def add_trigger_to_bucket(event, context):
     my_queue_url = ""
     response = sqs_client.list_queues()
     for url in response['QueueUrls']:
-        if "aqts-capture-trigger-queue-TEST" in url:
+        if CAPTURE_TRIGGER in url:
             my_queue_url = url
     response = sqs_client.get_queue_attributes(
         QueueUrl=my_queue_url,
@@ -230,7 +238,7 @@ def remove_trigger_from_bucket(event, context):
     my_queue_url = ""
     response = sqs_client.list_queues()
     for url in response['QueueUrls']:
-        if "aqts-capture-trigger-queue-TEST" in url:
+        if CAPTURE_TRIGGER in url:
             my_queue_url = url
 
     response = bucket_notification.put(
@@ -253,7 +261,7 @@ def run_integration_tests(event, context):
     :return:
     """
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_TEST,
+        SecretId=NWCAPTURE_REAL,
     )
     secret_string = json.loads(original['SecretString'])
     db_host = secret_string['DATABASE_ADDRESS']
@@ -286,7 +294,7 @@ def pre_test(event, context):
     :return:
     """
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_TEST,
+        SecretId=NWCAPTURE_REAL,
     )
     secret_string = json.loads(original['SecretString'])
     db_host = secret_string['DATABASE_ADDRESS']
@@ -306,9 +314,6 @@ def pre_test(event, context):
 
 def falsify_secrets(event, context):
     """
-    Todo replace lambda environment variables for password and db address
-    while leaving others untouched.
-
     1. call lambda_client.get_function_configuration() to get original env variables
     2. call secrets_client.get_secret_value() to get the secrets we want to change
     3. replace the env variable for "AQTS_SCHEMA_OWNER_PASSWORD" or "TRANSFORM_SCHEMA_OWNER_PASSWORD"
@@ -320,46 +325,36 @@ def falsify_secrets(event, context):
     :param context:
     :return:
     """
-
-    original = secrets_client.get_secret_value(
-         SecretId=NWCAPTURE_LOAD
-    )
-    secret_string = json.loads(original['SecretString'])
-    db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
-    db_address = str(secret_string['DATABASE_ADDRESS'])
-
-    for lambda_function in LAMBDA_FUNCTIONS:
-        # 1.
-        response = lambda_client.get_function_configuration(
-            FunctionName=lambda_function
-        )
-        my_env_variables = response['Environment']['Variables']
-        logger.info(f"BEFORE function {lambda_function} my_env_variables= {my_env_variables}")
-        if my_env_variables.get("AQTS_SCHEMA_OWNER_PASSWORD") is not None:
-            my_env_variables["AQTS_SCHEMA_OWNER_PASSWORD"] = db_password
-        elif my_env_variables.get("TRANSFORM_SCHEMA_OWNER_PASSWORD") is not None:
-            my_env_variables["TRANSFORM_SCHEMA_OWNER_PASSWORD"] = db_password
-        if my_env_variables.get("AQTS_DATABASE_ADDRESS") is not None:
-            my_env_variables["AQTS_DATABASE_ADDRESS"] = db_address
-        elif my_env_variables.get("TRANSFORM_DATABASE_ADDRESS") is not None:
-            my_env_variables["TRANSFORM_DATABASE_ADDRESS"] = db_address
-        if my_env_variables.get("DB_PASSWORD") is not None:
-            my_env_variables["DB_PASSWORD"] = db_password
-        if my_env_variables.get("DB_HOST") is not None:
-            my_env_variables["DB_HOST"] = db_address
-
-        lambda_client.update_function_configuration(
-            FunctionName=lambda_function,
-            Environment={
-                'Variables': my_env_variables
-            }
-        )
+    _replace_secrets(NWCAPTURE_LOAD)
 
 
 def restore_secrets(event, context):
+    _replace_secrets(NWCAPTURE_REAL)
 
+
+def modify_schema_owner_password(event, context):
+    """
+    We don't know the password for 'capture_owner' on the production db,
+    but we have already changed the postgres password in the modifyDbCluster step.
+    So change the password for 'capture_owner' here.
+    :param event:
+    :param context:
+    :return:
+    """
     original = secrets_client.get_secret_value(
-         SecretId=NWCAPTURE_TEST
+        SecretId=NWCAPTURE_LOAD,
+    )
+    secret_string = json.loads(original['SecretString'])
+    db_host = secret_string['DATABASE_ADDRESS']
+    db_name = secret_string['DATABASE_NAME']
+    rds = RDS(db_host, 'postgres', db_name, 'Password123')
+    sql = "alter user capture_owner with password 'Password123'"
+    result = rds.alter_permissions(sql)
+
+
+def _replace_secrets(secret_id):
+    original = secrets_client.get_secret_value(
+        SecretId=secret_id
     )
     secret_string = json.loads(original['SecretString'])
     db_password = str(secret_string['SCHEMA_OWNER_PASSWORD'])
@@ -393,23 +388,3 @@ def restore_secrets(event, context):
                 'Variables': my_env_variables
             }
         )
-
-
-def modify_schema_owner_password(event, context):
-    """
-    We don't know the password for 'capture_owner' on the production db,
-    but we have already changed the postgres password in the modifyDbCluster step.
-    So change the password for 'capture_owner' here.
-    :param event:
-    :param context:
-    :return:
-    """
-    original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_LOAD,
-    )
-    secret_string = json.loads(original['SecretString'])
-    db_host = secret_string['DATABASE_ADDRESS']
-    db_name = secret_string['DATABASE_NAME']
-    rds = RDS(db_host, 'postgres', db_name, 'Password123')
-    sql = "alter user capture_owner with password 'Password123'"
-    result = rds.alter_permissions(sql)
