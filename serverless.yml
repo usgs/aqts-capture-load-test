@@ -153,21 +153,21 @@ functions:
     vpc: ${self:custom.vpc}
 
 
-resources:
-  Resources:
-    ReferenceFileBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-reference
-    S3BucketLoadTest:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-load
-        AccessControl: Private
-        LifecycleConfiguration:
-          Rules:
-            - ExpirationInDays: 4
-              Status: Enabled
+#resources:
+#  Resources:
+#    ReferenceFileBucket:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-reference
+#    S3BucketLoadTest:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-load
+#        AccessControl: Private
+#        LifecycleConfiguration:
+#          Rules:
+#            - ExpirationInDays: 4
+#              Status: Enabled
 
 
 stepFunctions:
