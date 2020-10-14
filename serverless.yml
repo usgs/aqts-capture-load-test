@@ -115,6 +115,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
