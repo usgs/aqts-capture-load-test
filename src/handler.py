@@ -213,32 +213,46 @@ def add_trigger_to_bucket(event, context):
     :param context:
     :return:
     """
+
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
+
+    logger.info(f"right before add trigger queues {bucket_notification.queue_configurations}")
+    logger.info(f"right before add trigger lambdas {bucket_notification.lambda_function_configurations}")
+
     my_queue_url = ""
     response = sqs_client.list_queues()
+    logger.info(response)
     for url in response['QueueUrls']:
         if CAPTURE_TRIGGER in url:
+            logger.info(f"found url {url}")
             my_queue_url = url
+        else:
+            logger.info(f"not a match url {url}")
     response = sqs_client.get_queue_attributes(
         QueueUrl=my_queue_url,
         AttributeNames=['QueueArn']
     )
+    logger.info(f"get_queue_attributes {response}")
     my_queue_arn = response['Attributes']['QueueArn']
-
+    logger.info(f"arn: {my_queue_arn}")
     response = bucket_notification.put(
         NotificationConfiguration={
             'QueueConfigurations': [
                 {
                     'QueueArn': my_queue_arn,
                     'Events': [
-                        's3:ObjectCreated:*'
+                        's3:ObjectCreated:Put'
                     ]
                 }
             ]
         }
     )
+    logger.info(f"response adding trigger {response}")
     bucket_notification.load()
+
+    logger.info(f"right after add trigger queues {bucket_notification.queue_configurations}")
+    logger.info(f"right after add trigger lambdas {bucket_notification.lambda_function_configurations}")
 
 
 def remove_trigger_from_bucket(event, context):
@@ -250,11 +264,8 @@ def remove_trigger_from_bucket(event, context):
     """
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     bucket_notification.load()
-    my_queue_url = ""
-    response = sqs_client.list_queues()
-    for url in response['QueueUrls']:
-        if CAPTURE_TRIGGER in url:
-            my_queue_url = url
+    logger.info(f"right before remove trigger queues {bucket_notification.queue_configurations}")
+    logger.info(f"right before remove trigger lambdas {bucket_notification.lambda_function_configurations}")
 
     response = bucket_notification.put(
         NotificationConfiguration={
@@ -263,6 +274,9 @@ def remove_trigger_from_bucket(event, context):
         }
     )
     bucket_notification.load()
+
+    logger.info(f"right after remove trigger queues {bucket_notification.queue_configurations}")
+    logger.info(f"right after remove trigger lambdas {bucket_notification.lambda_function_configurations}")
 
 
 def run_integration_tests(event, context):
