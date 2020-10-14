@@ -397,12 +397,12 @@ def _replace_secrets(secret_id):
 
         logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
 
-        # lambda_client.update_function_configuration(
-        #     FunctionName=lambda_function,
-        #     Environment={
-        #         'Variables': my_env_variables
-        #     }
-        # )
+        lambda_client.update_function_configuration(
+            FunctionName=lambda_function,
+            Environment={
+                'Variables': my_env_variables
+            }
+        )
 
 
 def _describe_db_clusters(action):
