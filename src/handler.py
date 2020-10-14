@@ -154,7 +154,7 @@ def restore_db_cluster(event, context):
         if event.get("snapshotIdentifier") is not None:
             my_snapshot_identifier = event.get("snapshotIdentifier")
 
-    response = rds_client.restore_db_cluster_from_snapshot(
+    rds_client.restore_db_cluster_from_snapshot(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SnapshotIdentifier=my_snapshot_identifier,
         Engine=ENGINE,
@@ -276,7 +276,7 @@ def run_integration_tests(event, context):
     :return:
     """
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_REAL,
+        SecretId=NWCAPTURE_LOAD,
     )
     secret_string = json.loads(original['SecretString'])
     db_host = secret_string['DATABASE_ADDRESS']
@@ -312,11 +312,12 @@ def pre_test(event, context):
         SecretId=NWCAPTURE_LOAD,
     )
     secret_string = json.loads(original['SecretString'])
+    logger.info(f"retrieving secrets from {NWCAPTURE_LOAD} {secret_string}")
     db_host = secret_string['DATABASE_ADDRESS']
     db_user = secret_string['SCHEMA_OWNER_USERNAME']
     db_name = secret_string['DATABASE_NAME']
     db_password = secret_string['SCHEMA_OWNER_PASSWORD']
-    logger.info(f"{db_host} {db_user} {db_name} {db_password}")
+    logger.info(f"db_host= {db_host} db_password= {db_password}")
     rds = RDS(db_host, db_user, db_name, db_password)
     sql = "select count(1) from capture.json_data"
     result = rds.execute_sql(sql)
