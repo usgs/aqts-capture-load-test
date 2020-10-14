@@ -294,7 +294,7 @@ def run_integration_tests(event, context):
     logger.info(f"read content from S3: {obj}")
     content = json.loads(obj.get()['Body'].read().decode('utf-8'))
     logger.info(f"after json loads {content}")
-    content["End Time"] = datetime.datetime.now()
+    content["End Time"] = str(datetime.datetime.now())
     content["End Count"] = result
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
@@ -323,7 +323,7 @@ def pre_test(event, context):
     result = rds.execute_sql(sql)
     logger.info(f"RESULT: {result}")
 
-    content = {"StartTime": datetime.datetime.now(), "StartCount": result}
+    content = {"StartTime": str(datetime.datetime.now()), "StartCount": result}
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
