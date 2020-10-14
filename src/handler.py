@@ -141,7 +141,7 @@ def restore_db_cluster(event, context):
     """
 
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_LOAD
+        SecretId=NWCAPTURE_REAL
     )
     secret_string = json.loads(original['SecretString'])
     kms_key = str(secret_string['KMS_KEY_ID'])
