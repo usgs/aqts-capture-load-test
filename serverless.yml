@@ -184,13 +184,13 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: DisableTrigger
+        StartAt: FalsifySecrets
         States:
-          DisableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [disableTrigger, Arn]
-            Next: FalsifySecrets
+#          DisableTrigger:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [disableTrigger, Arn]
+#            Next: FalsifySecrets
           FalsifySecrets:
             Type: Task
             Resource:
@@ -289,11 +289,11 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
-            Next: EnableTrigger
-          EnableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [enableTrigger, Arn]
+#            Next: EnableTrigger
+#          EnableTrigger:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [enableTrigger, Arn]
             End: true
 
 plugins:
