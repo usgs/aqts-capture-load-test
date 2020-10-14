@@ -145,7 +145,7 @@ def restore_db_cluster(event, context):
     )
     secret_string = json.loads(original['SecretString'])
     kms_key = str(secret_string['KMS_KEY_ID'])
-    subnet_name = str(secret_string['DB_SUBNET_NAME'])
+    subnet_name = str(secret_string['DB_SUBGROUP_NAME'])
     vpc_security_group_id = str(secret_string['VPC_SECURITY_GROUP_ID'])
     if not kms_key or not subnet_name or not vpc_security_group_id:
         raise Exception(f"Missing db configuration data {secret_string}")
