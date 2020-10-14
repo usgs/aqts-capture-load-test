@@ -309,7 +309,7 @@ def pre_test(event, context):
     :return:
     """
     original = secrets_client.get_secret_value(
-        SecretId=NWCAPTURE_REAL,
+        SecretId=NWCAPTURE_LOAD,
     )
     secret_string = json.loads(original['SecretString'])
     db_host = secret_string['DATABASE_ADDRESS']
