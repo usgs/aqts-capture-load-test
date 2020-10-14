@@ -169,7 +169,7 @@ def restore_db_cluster(event, context):
         CopyTagsToSnapshot=False,
         KmsKeyId=kms_key,
         VpcSecurityGroupIds=[
-            vpc_security_group_id,
+            vpc_security_group_id
         ],
     )
 
