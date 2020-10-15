@@ -186,11 +186,6 @@ stepFunctions:
         Comment: "AQTS Load Test"
         StartAt: FalsifySecrets
         States:
-#          DisableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [disableTrigger, Arn]
-#            Next: FalsifySecrets
           FalsifySecrets:
             Type: Task
             Resource:
@@ -233,6 +228,11 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
+            Next: EnableTrigger
+          EnableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enableTrigger, Arn]
             Next: AddTriggerToTestBucket
           AddTriggerToTestBucket:
             Type: Task
@@ -289,11 +289,11 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
-#            Next: EnableTrigger
-#          EnableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [enableTrigger, Arn]
+            Next: DisableTrigger
+          DisableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [disableTrigger, Arn]
             End: true
 
 plugins:
