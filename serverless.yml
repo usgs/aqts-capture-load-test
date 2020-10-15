@@ -289,11 +289,11 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
-            Next: DisableTrigger
-          DisableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [disableTrigger, Arn]
+#            Next: DisableTrigger
+#          DisableTrigger:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [disableTrigger, Arn]
             End: true
 
 plugins:
