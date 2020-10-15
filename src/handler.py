@@ -6,10 +6,9 @@ import logging
 
 from src.rds import RDS
 
-"""
-As of right now, the plan is to always deploy and run on QA.  However,
-if in the future that changes, use the 'stage' variable to update everything
-so it will automatically work on other stages.
+""" 
+As of right now, the plan is to always deploy and run on QA.  However, if in the future that changes, 
+use the 'stage' variable to update everything so it will automatically work on other stages.
 """
 stage = os.getenv('STAGE', 'QA')
 
@@ -39,8 +38,10 @@ LAMBDA_FUNCTIONS = [
     f"aqts-capture-error-handler-{stage}-aqtsErrorHandler"
 ]
 
-# Default snapshot identifier, may be overridden by passing a custom
-# snapshot identifier in the step function event
+"""
+The default snapshot identifier is the production snapshot from two days ago. You can override this by passing in
+a different 'snapshotIdentifier' when you launch the state machine.
+"""
 two_days_ago = datetime.datetime.now() - datetime.timedelta(2)
 month = str(two_days_ago.month)
 if len(month) == 1:
@@ -50,17 +51,27 @@ if len(day) == 1:
     day = f"0{day}"
 SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-{day}-10-08"
 
+"""
+Every aurora cluster requires at least one db instance.
+"""
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
+
+"""
+TODO make this configurable similar to snapshotIdentifier
+"""
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
+
 ENGINE = 'aurora-postgresql'
-DEST_BUCKET = 'iow-retriever-capture-load'
-REAL_BUCKET = f"iow-retriever-capture-{stage}"
+
+TEST_BUCKET = 'iow-retriever-capture-load'
+REAL_BUCKET = f"iow-retriever-capture-{stage.lower()}"
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
 CAPTURE_TRIGGER = f"aqts-capture-trigger-queue-{stage}"
 QUEUES = [f"aqts-capture-error-queue-{stage}", f"aqts-capture-trigger-queue-{stage}"]
+
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
@@ -78,9 +89,8 @@ def delete_db_cluster(event, context):
 
 def modify_db_cluster(event, context):
     """
-    When we restore the database from a production snapshot,
-    we don't know the passwords.  So, modify the postgres password here
-    so we can work with the database.
+    When we restore the database from a production snapshot, we don't know the passwords.  So, modify the 
+    postgres password here so we can work with the database.
     :param event:
     :param context:
     :return:
@@ -110,8 +120,7 @@ def create_db_instance(event, context):
 
 def copy_s3(event, context):
     """
-    Copy files from the 'reference' bucket to the trigger bucket to simulate
-    a full run.
+    Copy files from the 'reference' bucket to the trigger bucket to simulate a full run.
     :param event:
     :param context:
     :return:
@@ -127,16 +136,15 @@ def copy_s3(event, context):
             'Bucket': SRC_BUCKET,
             'Key': key
         }
-        bucket = s3_resource.Bucket(DEST_BUCKET)
+        bucket = s3_resource.Bucket(TEST_BUCKET)
         bucket.copy(copy_source, key)
 
 
 def restore_db_cluster(event, context):
     """
-    By default we try to restore the production snapshot that
-    is two days old.  If a specific snapshot needs to be used
-    for the test, it can be passed in as part of an event when
-    the step function is invoked with the key 'snapshotIdentifier'.
+    By default we try to restore the production snapshot that is two days old.  If a specific snapshot needs to be used
+    for the test, it can be passed in as part of an event when the step function is invoked with the key 
+    'snapshotIdentifier'.
 
     Restoring an aurora db cluster from snapshot takes one to two hours.
     """
@@ -146,9 +154,9 @@ def restore_db_cluster(event, context):
     )
     secret_string = json.loads(original['SecretString'])
     kms_key = str(secret_string['KMS_KEY_ID'])
-    subnet_name = str(secret_string['DB_SUBGROUP_NAME'])
+    subgroup_name = str(secret_string['DB_SUBGROUP_NAME'])
     vpc_security_group_id = str(secret_string['VPC_SECURITY_GROUP_ID'])
-    if not kms_key or not subnet_name or not vpc_security_group_id:
+    if not kms_key or not subgroup_name or not vpc_security_group_id:
         raise Exception(f"Missing db configuration data {secret_string}")
     my_snapshot_identifier = SNAPSHOT_IDENTIFIER
     if event is not None:
@@ -161,7 +169,7 @@ def restore_db_cluster(event, context):
         Engine=ENGINE,
         EngineVersion='11.7',
         Port=5432,
-        DBSubnetGroupName=subnet_name,
+        DBSubnetGroupName=subgroup_name,
         DatabaseName='nwcapture-load',
         EnableIAMDatabaseAuthentication=False,
         EngineMode='provisioned',
@@ -171,71 +179,69 @@ def restore_db_cluster(event, context):
         KmsKeyId=kms_key,
         VpcSecurityGroupIds=[
             vpc_security_group_id
-        ],
+        ]
     )
 
-
-def disable_trigger(event, context):
-    """
-    Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
-    :param event:
-    :param context:
-    :return:
-    """
-    response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-    for item in response['EventSourceMappings']:
-        lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
-    return True
-
-
-def enable_trigger(event, context):
-    """
-    Enable the trigger on the real bucket (after test, restoring things to normal)
-    if the real db is on.
-    :param event:
-    :param context:
-    :return:
-    """
-    active_dbs = _describe_db_clusters('stop')
-    if DB[stage] in active_dbs:
-        logger.info("DB Active, going to enable trigger")
-        response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-        for item in response['EventSourceMappings']:
-            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-        return True
-    logger.info("DB Inactive, don't enable trigger")
-    return False
+#
+# def xxdisable_trigger(event, context):
+#     """
+#     Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
+#     :param event:
+#     :param context:
+#     :return:
+#     """
+#     response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+#     for item in response['EventSourceMappings']:
+#         lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
+#     return True
+#
+#
+# def xxenable_trigger(event, context):
+#     """
+#     Enable the trigger on the real bucket (after test, restoring things to normal)
+#     if the real db is on.
+#     :param event:
+#     :param context:
+#     :return:
+#     """
+#     active_dbs = _describe_db_clusters('stop')
+#     if DB[stage] in active_dbs:
+#         logger.info("DB Active, going to enable trigger")
+#         response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+#         for item in response['EventSourceMappings']:
+#             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+#         return True
+#     logger.info("DB Inactive, don't enable trigger")
+#     return False
 
 
 def add_trigger_to_bucket(event, context):
     """
-    Attach the trigger to the load test bucket.
+    We have two buckets and one queue.  There's no way to disable event notification for a bucket, you have
+    to remove it.  So here, to enable the trigger for testing we remove it from the real bucket, purge the
+    queues, and then add the trigger to the test bucket.
     :param event:
     :param context:
     :return:
     """
+    logger.info(f"REAL BUCKET {REAL_BUCKET}")
+    logger.info(f"TEST BUCKET {TEST_BUCKET}")
     _remove_trigger(REAL_BUCKET)
     _purge_queues(QUEUES)
-    _add_trigger(DEST_BUCKET)
+    _add_trigger(TEST_BUCKET)
 
 
 def remove_trigger_from_bucket(event, context):
-    """
-    Disconnect the trigger from the load test bucket.
-    :param event:
-    :param context:
-    :return:
-    """
-    _remove_trigger(DEST_BUCKET)
+    _remove_trigger(TEST_BUCKET)
+    _purge_queues(QUEUES)
     _add_trigger(REAL_BUCKET)
 
 
 def run_integration_tests(event, context):
     """
-    Integration tests will go here.  Right now the idea is that the pre-test
-    will save a TEST_RESULT object up in the bucket and that the integration tests will
-    write to that same object, so when everything finishes it will be like a report.
-    That's just a placeholder idea.
+    Integration tests will go here.  Right now the idea is that the pre-test will save a TEST_RESULT object up 
+    in the bucket and that the integration tests will write to that same object, so when everything finishes 
+    it will be like a report. That's just a placeholder idea.
     :param event:
     :param context:
     :return:
@@ -253,15 +259,11 @@ def run_integration_tests(event, context):
     rds = RDS(db_host, db_user, db_name, db_password)
     sql = "select count(1) from capture.json_data"
     result = rds.execute_sql(sql)
-    logger.info(f"RESULT: {result}")
 
     obj = s3.Object('iow-retriever-capture-load', 'TEST_RESULTS')
-    logger.info(f"read content from S3: {obj}")
     content = json.loads(obj.get()['Body'].read().decode('utf-8'))
-    logger.info(f"after json loads {content}")
     content["End Time"] = str(datetime.datetime.now())
     content["End Count"] = result
-    logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
 
@@ -282,15 +284,12 @@ def pre_test(event, context):
     db_user = secret_string['SCHEMA_OWNER_USERNAME']
     db_name = secret_string['DATABASE_NAME']
     db_password = secret_string['SCHEMA_OWNER_PASSWORD']
-    logger.info(f"db_host= {db_host} db_password= {db_password}")
     rds = RDS(db_host, db_user, db_name, db_password)
     sql = "select count(1) from capture.json_data"
     result = rds.execute_sql(sql)
-    logger.info(f"RESULT: {result}")
 
     content = {"StartTime": str(datetime.datetime.now()), "StartCount": result}
-    logger.info(f"Writing this to S3 {json.dumps(content)}")
-    s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
+    s3.Object(TEST_BUCKET, 'TEST_RESULTS').put(Body=json.dumps(content))
 
 
 def falsify_secrets(event, context):
@@ -330,7 +329,7 @@ def modify_schema_owner_password(event, context):
     db_name = secret_string['DATABASE_NAME']
     rds = RDS(db_host, 'postgres', db_name, 'Password123')
     sql = "alter user capture_owner with password 'Password123'"
-    result = rds.alter_permissions(sql)
+    rds.alter_permissions(sql)
 
 
 def _replace_secrets(secret_id):
@@ -342,7 +341,6 @@ def _replace_secrets(secret_id):
     db_address = str(secret_string['DATABASE_ADDRESS'])
 
     for lambda_function in LAMBDA_FUNCTIONS:
-
         response = lambda_client.get_function_configuration(
             FunctionName=lambda_function
         )
@@ -360,9 +358,7 @@ def _replace_secrets(secret_id):
             my_env_variables["DB_PASSWORD"] = db_password
         if my_env_variables.get("DB_HOST") is not None:
             my_env_variables["DB_HOST"] = db_address
-
         logger.info(f"AFTER function {lambda_function} my_env_variables= {my_env_variables}")
-
         lambda_client.update_function_configuration(
             FunctionName=lambda_function,
             Environment={
@@ -408,9 +404,7 @@ def _add_trigger(bucket):
             ]
         }
     )
-    logger.info(f"response adding trigger {response}")
     bucket_notification.load()
-    logger.info(f"right after add trigger queues {bucket_notification.get_available_subresources()}")
 
 
 def _remove_trigger(bucket):

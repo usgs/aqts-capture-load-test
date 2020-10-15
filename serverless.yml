@@ -229,11 +229,11 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
-            Next: EnableTrigger
-          EnableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [enableTrigger, Arn]
+#            Next: EnableTrigger
+#          EnableTrigger:
+#            Type: Task
+#            Resource:
+#              Fn::GetAtt: [enableTrigger, Arn]
             Next: AddTriggerToTestBucket
           AddTriggerToTestBucket:
             Type: Task
