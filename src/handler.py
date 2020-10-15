@@ -265,7 +265,8 @@ def add_trigger_to_bucket(event, context):
     logger.info(f"get_queue_attributes {response}")
     my_queue_arn = response['Attributes']['QueueArn']
 
-    response = s3_client.get_bucket_notification_configuration(Bucket="iow-retriever-capture-load")
+    response = s3_client.get_bucket_notification_configuration(Bucket=DEST_BUCKET)
+    logger.info(f"where are QueueConfigurations? {response}")
     configurations = response['QueueConfigurations']
 
     # New configuration to add
@@ -307,7 +308,8 @@ def remove_trigger_from_bucket(event, context):
     #
     # logger.info(f"right after remove trigger queues {bucket_notification}")
 
-    response = s3_client.get_bucket_notification_configuration(Bucket="iow-retriever-capture-load")
+    response = s3_client.get_bucket_notification_configuration(Bucket=DEST_BUCKET)
+    logger.info(f"response {response} where are QueueConfigurations?")
     configurations = response['QueueConfigurations']
 
     configurations = {}
