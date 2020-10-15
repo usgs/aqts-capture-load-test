@@ -214,7 +214,7 @@ def add_trigger_to_bucket(event, context):
     :return:
     """
 
-    bucket_notification = s3_client.BucketNotification(DEST_BUCKET)
+    bucket_notification = s3.BucketNotification(DEST_BUCKET)
     logger.info(f"START {bucket_notification.get_available_subresources()}")
     my_queue_url = ""
     response = sqs_client.list_queues()
