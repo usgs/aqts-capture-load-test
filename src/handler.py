@@ -54,12 +54,13 @@ DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
 DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
 DEST_BUCKET = 'iow-retriever-capture-load'
+REAL_BUCKET = f"iow-retriever-capture-{stage}"
 SRC_BUCKET = 'iow-retriever-capture-reference'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
 CAPTURE_TRIGGER = f"aqts-capture-trigger-queue-{stage}"
-
+QUEUES = [f"aqts-capture-error-queue-{stage}", f"aqts-capture-trigger-queue-{stage}"]
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
@@ -213,36 +214,9 @@ def add_trigger_to_bucket(event, context):
     :param context:
     :return:
     """
-
-    bucket_notification = s3.BucketNotification(DEST_BUCKET)
-    logger.info(f"START {bucket_notification.get_available_subresources()}")
-    my_queue_url = ""
-    response = sqs_client.list_queues()
-    for url in response['QueueUrls']:
-        if CAPTURE_TRIGGER in url:
-            logger.info(f"found url {url}")
-            my_queue_url = url
-            break
-    response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url,
-        AttributeNames=['QueueArn']
-    )
-    my_queue_arn = response['Attributes']['QueueArn']
-    response = bucket_notification.put(
-        NotificationConfiguration={
-            'QueueConfigurations': [
-                {
-                    'QueueArn': my_queue_arn,
-                    'Events': [
-                        's3:ObjectCreated:*'
-                    ]
-                }
-            ]
-        }
-    )
-    logger.info(f"response adding trigger {response}")
-    bucket_notification.load()
-    logger.info(f"right after add trigger queues {bucket_notification.get_available_subresources()}")
+    _remove_trigger(REAL_BUCKET)
+    _purge_queues(QUEUES)
+    _add_trigger(DEST_BUCKET)
 
 
 def remove_trigger_from_bucket(event, context):
@@ -252,22 +226,8 @@ def remove_trigger_from_bucket(event, context):
     :param context:
     :return:
     """
-    bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
-    logger.info(f"START: {bucket_notification.get_available_subresources()}")
-    bucket_notification.load()
-    logger.info(f"right before remove trigger queues {bucket_notification}")
-    response = bucket_notification.put(
-        NotificationConfiguration={
-            'QueueConfigurations': [
-            ]
-        }
-    )
-    bucket_notification.load()
-
-    logger.info(f"right after remove trigger queues {response}")
-
-    logger.info(f"right after remove trigger queues {bucket_notification.get_available_subresources()}")
-
+    _remove_trigger(DEST_BUCKET)
+    _add_trigger(REAL_BUCKET)
 
 
 def run_integration_tests(event, context):
@@ -420,3 +380,53 @@ def _describe_db_clusters(action):
         # Filter on the ones that are running
         rds_cluster_identifiers = [x['DBClusterIdentifier'] for x in all_dbs if x['Status'] == 'available']
         return rds_cluster_identifiers
+
+
+def _add_trigger(bucket):
+    bucket_notification = s3.BucketNotification(bucket)
+    my_queue_url = ""
+    response = sqs_client.list_queues()
+    for url in response['QueueUrls']:
+        if CAPTURE_TRIGGER in url:
+            logger.info(f"found url {url}")
+            my_queue_url = url
+            break
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url,
+        AttributeNames=['QueueArn']
+    )
+    my_queue_arn = response['Attributes']['QueueArn']
+    response = bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+                {
+                    'QueueArn': my_queue_arn,
+                    'Events': [
+                        's3:ObjectCreated:*'
+                    ]
+                }
+            ]
+        }
+    )
+    logger.info(f"response adding trigger {response}")
+    bucket_notification.load()
+    logger.info(f"right after add trigger queues {bucket_notification.get_available_subresources()}")
+
+
+def _remove_trigger(bucket):
+    bucket_notification = s3.BucketNotification(bucket)
+    bucket_notification.load()
+    response = bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+            ]
+        }
+    )
+    bucket_notification.load()
+
+
+def _purge_queues(queue_names):
+    for queue_name in queue_names:
+        sqs = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
+        queue_info = sqs.get_queue_url(QueueName=queue_name)
+        sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
