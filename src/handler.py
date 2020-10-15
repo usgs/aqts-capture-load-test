@@ -198,9 +198,9 @@ def enable_trigger(event, context):
     active_dbs = _describe_db_clusters('stop')
     if DB[stage] in active_dbs:
         logger.info("DB Active, going to enable trigger")
-        # response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-        # for item in response['EventSourceMappings']:
-        #     lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+        response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+        for item in response['EventSourceMappings']:
+            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
         return True
     logger.info("DB Inactive, don't enable trigger")
     return False
