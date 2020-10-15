@@ -78,6 +78,7 @@ lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
 sqs_client = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
 s3_client = boto3.client('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 s3 = boto3.resource('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
+cloudwatch_client = boto3.client('cloudwatch', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
 
 
 def delete_db_cluster(event, context):
@@ -125,6 +126,28 @@ def copy_s3(event, context):
     :param context:
     :return:
     """
+
+    ### START TEMPORARY
+
+    resp = s3_client.list_objects_v2(Bucket=REAL_BUCKET)
+    keys = []
+    for obj in resp['Contents']:
+        keys.append(obj['Key'])
+
+    s3_resource = boto3.resource('s3')
+    count = 0
+    for key in keys:
+        count = count + 1
+        if count > 5000:
+            break
+        copy_source = {
+            'Bucket': REAL_BUCKET,
+            'Key': key
+        }
+        bucket = s3_resource.Bucket(SRC_BUCKET)
+        bucket.copy(copy_source, key)
+    ### END TEMPORARY
+
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
@@ -138,6 +161,34 @@ def copy_s3(event, context):
         }
         bucket = s3_resource.Bucket(TEST_BUCKET)
         bucket.copy(copy_source, key)
+
+
+def wait_for_processing(event, context):
+    response = cloudwatch_client.get_metric_data(
+        MetricDataQueries=[
+            {
+                'Id': 'cpu_1',
+                'MetricStat': {
+                    'Metric': {
+                        'Namespace': 'AWS/RDS',
+                        'MetricName': 'CPUUtilization',
+                        'Dimensions': [
+                            {
+                                "Name": "DBInstanceIdentifier",
+                                "Value": DB_INSTANCE_IDENTIFIER
+                            }]
+                    },
+                    'Period': 300,
+                    'Stat': 'Maximum',
+                }
+            }
+        ],
+        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=300)).timestamp(),
+        EndTime=datetime.datetime.now().timestamp()
+    )
+    db_utilization = response['MetricDataResults'][0]['Values'][0]
+    if db_utilization > 1:
+        raise Exception(f"Database is still busy {response}")
 
 
 def restore_db_cluster(event, context):
@@ -181,6 +232,7 @@ def restore_db_cluster(event, context):
             vpc_security_group_id
         ]
     )
+
 
 #
 # def xxdisable_trigger(event, context):
@@ -379,6 +431,7 @@ def _describe_db_clusters(action):
 
 
 def _add_trigger(bucket):
+    logger.info(f"_add_trigger to bucket {bucket}")
     bucket_notification = s3.BucketNotification(bucket)
     my_queue_url = ""
     response = sqs_client.list_queues()
@@ -405,9 +458,11 @@ def _add_trigger(bucket):
         }
     )
     bucket_notification.load()
+    logger.info(f"bucket_notification.put ... {response}")
 
 
 def _remove_trigger(bucket):
+    logger.info(f"_remove_trigger from bucket {bucket}")
     bucket_notification = s3.BucketNotification(bucket)
     bucket_notification.load()
     response = bucket_notification.put(
@@ -417,6 +472,7 @@ def _remove_trigger(bucket):
         }
     )
     bucket_notification.load()
+    logger.info(f"trigger should be removed {response}")
 
 
 def _purge_queues(queue_names):
