@@ -171,25 +171,6 @@ def wait_for_processing(event, context):
         raise Exception(f"Database is still busy {response}")
 
 
-def _enable_trigger(function_name, db_name):
-    active_dbs = _describe_db_clusters('stop')
-    if db_name not in active_dbs:
-        return f"DB {db_name} is not active, skip enable of triggers"
-
-    my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
-    event_source_mapping = my_lambda.list_event_source_mappings(FunctionName=function_name)
-    for item in event_source_mapping['EventSourceMappings']:
-        response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-        logger.info(f"before enabling trigger {response}")
-        if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
-            my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-            response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-            return f"Trigger should be enabled.  function name: {function_name} item: {response}"
-        elif response['State'] in ('Enabled', 'Enabling'):
-            return f"Trigger was already enabled. function name {function_name}"
-    return f"Trigger not enabled, even though db {db_name} was active function_names {function_name} event_source_mapping {event_source_mapping}"
-
-
 def enable_test_trigger(event, context):
     result = _enable_trigger(CAPTURE_TRIGGER, DB["LOAD"])
     logger.info(result)
@@ -198,6 +179,7 @@ def enable_test_trigger(event, context):
 def enable_real_trigger(event, context):
     result = _enable_trigger(CAPTURE_TRIGGER, DB[stage])
     logger.info(result)
+
 
 def restore_db_cluster(event, context):
     """
@@ -242,39 +224,6 @@ def restore_db_cluster(event, context):
     )
 
 
-#
-# def xxdisable_trigger(event, context):
-#     """
-#     Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
-#     :param event:
-#     :param context:
-#     :return:
-#     """
-#     response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-#     for item in response['EventSourceMappings']:
-#         lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
-#     return True
-#
-#
-# def xxenable_trigger(event, context):
-#     """
-#     Enable the trigger on the real bucket (after test, restoring things to normal)
-#     if the real db is on.
-#     :param event:
-#     :param context:
-#     :return:
-#     """
-#     active_dbs = _describe_db_clusters('stop')
-#     if DB[stage] in active_dbs:
-#         logger.info("DB Active, going to enable trigger")
-#         response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-#         for item in response['EventSourceMappings']:
-#             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-#         return True
-#     logger.info("DB Inactive, don't enable trigger")
-#     return False
-
-
 def add_trigger_to_bucket(event, context):
     """
     We have two buckets and one queue.  There's no way to disable event notification for a bucket, you have
@@ -284,15 +233,19 @@ def add_trigger_to_bucket(event, context):
     :param context:
     :return:
     """
-    _remove_trigger(REAL_BUCKET)
+    remove_result = _remove_trigger(REAL_BUCKET)
+    logger.info(remove_result)
     _purge_queues(QUEUES)
-    _add_trigger(TEST_BUCKET)
+    add_result = _add_trigger(TEST_BUCKET)
+    logger.info(add_result)
 
 
 def remove_trigger_from_bucket(event, context):
-    _remove_trigger(TEST_BUCKET)
+    remove_result = _remove_trigger(TEST_BUCKET)
+    logger.info(remove_result)
     _purge_queues(QUEUES)
-    _add_trigger(REAL_BUCKET)
+    add_result = _add_trigger(REAL_BUCKET)
+    logger.info(add_result)
 
 
 def run_integration_tests(event, context):
@@ -437,7 +390,6 @@ def _describe_db_clusters(action):
 
 
 def _add_trigger(bucket):
-    logger.info(f"_add_trigger to bucket {bucket}")
     bucket_notification = s3.BucketNotification(bucket)
     my_queue_url = ""
     response = sqs_client.list_queues()
@@ -464,11 +416,10 @@ def _add_trigger(bucket):
         }
     )
     bucket_notification.load()
-    logger.info(f"bucket_notification.put ... {response}")
+    return f"_add_trigger response {response} bucket {bucket} my_queue_arn {my_queue_arn}"
 
 
 def _remove_trigger(bucket):
-    logger.info(f"_remove_trigger from bucket {bucket}")
     bucket_notification = s3.BucketNotification(bucket)
     bucket_notification.load()
     response = bucket_notification.put(
@@ -478,7 +429,7 @@ def _remove_trigger(bucket):
         }
     )
     bucket_notification.load()
-    logger.info(f"trigger should be removed {response}")
+    return f"_remove_trigger response {response} bucket {bucket}"
 
 
 def _purge_queues(queue_names):
@@ -486,3 +437,22 @@ def _purge_queues(queue_names):
         sqs = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
         queue_info = sqs.get_queue_url(QueueName=queue_name)
         sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
+
+
+def _enable_trigger(function_name, db_name):
+    active_dbs = _describe_db_clusters('stop')
+    if db_name not in active_dbs:
+        return f"DB {db_name} is not active, skip enable of triggers"
+
+    my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
+    event_source_mapping = my_lambda.list_event_source_mappings(FunctionName=function_name)
+    for item in event_source_mapping['EventSourceMappings']:
+        response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
+        logger.info(f"before enabling trigger {response}")
+        if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
+            my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+            response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
+            return f"Trigger should be enabled.  function name: {function_name} item: {response}"
+        elif response['State'] in ('Enabled', 'Enabling'):
+            return f"Trigger was already enabled. function name {function_name}"
+    return f"Trigger not enabled, even though db {db_name} was active function_names {function_name} event_source_mapping {event_source_mapping}"
