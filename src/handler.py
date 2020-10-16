@@ -205,7 +205,9 @@ def enable_triggers(function_names, db_name):
                 my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
                 response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
                 return f"Trigger should be enabled.  function name: {function_name} item: {response}"
-    return f"Trigger not enabled, even though db {db_name} was active function_name {function_name}"
+            elif response['State'] in ('Enabled', 'Enabling'):
+                return f"Trigger was already enabled. function names {function_names}"
+    return f"Trigger not enabled, even though db {db_name} was active function_names {function_names}"
 
 
 def restore_db_cluster(event, context):
