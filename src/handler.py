@@ -127,26 +127,13 @@ def copy_s3(event, context):
     :return:
     """
 
-    ### START TEMPORARY
-
-    resp = s3_client.list_objects_v2(Bucket=REAL_BUCKET)
-    keys = []
-    for obj in resp['Contents']:
-        keys.append(obj['Key'])
-
-    s3_resource = boto3.resource('s3')
-    count = 0
-    for key in keys:
-        count = count + 1
-        if count > 5000:
-            break
-        copy_source = {
-            'Bucket': REAL_BUCKET,
-            'Key': key
-        }
-        bucket = s3_resource.Bucket(SRC_BUCKET)
-        bucket.copy(copy_source, key)
-    ### END TEMPORARY
+    # START TEMPORARY
+    for key in s3.list_objects(Bucket=REAL_BUCKET)['Contents']:
+        files = key['Key']
+        copy_source = {'Bucket': REAL_BUCKET, 'Key': files}
+        s3.meta.client.copy(copy_source, TEST_BUCKET, files)
+        logger.info(files)
+    # END TEMPORARY
 
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
@@ -189,6 +176,25 @@ def wait_for_processing(event, context):
     db_utilization = response['MetricDataResults'][0]['Values'][0]
     if db_utilization > 1:
         raise Exception(f"Database is still busy {response}")
+
+
+def enable_triggers(function_names):
+    active_dbs = _describe_db_clusters('stop')
+    if DB[stage] not in active_dbs:
+        return
+    my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
+    return_value = False
+    for function_name in function_names:
+        response = my_lambda.list_event_source_mappings(FunctionName=function_name)
+        for item in response['EventSourceMappings']:
+            response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
+            print(response)
+            if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
+                my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+                response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
+                logger.info(f"Trigger should be enabled.  function name: {function_name} item: {response}")
+                return_value = True
+    return return_value
 
 
 def restore_db_cluster(event, context):
@@ -281,12 +287,14 @@ def add_trigger_to_bucket(event, context):
     _remove_trigger(REAL_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(TEST_BUCKET)
+    enable_triggers(CAPTURE_TRIGGER)
 
 
 def remove_trigger_from_bucket(event, context):
     _remove_trigger(TEST_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(REAL_BUCKET)
+    enable_triggers(CAPTURE_TRIGGER)
 
 
 def run_integration_tests(event, context):
