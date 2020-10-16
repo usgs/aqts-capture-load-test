@@ -128,11 +128,22 @@ def copy_s3(event, context):
     """
 
     # START TEMPORARY
-    for key in s3.list_objects(Bucket=REAL_BUCKET)['Contents']:
-        files = key['Key']
-        copy_source = {'Bucket': REAL_BUCKET, 'Key': files}
-        s3.meta.client.copy(copy_source, TEST_BUCKET, files)
-        logger.info(files)
+    logger.info("Start temporary copy")
+    resp = s3_client.list_objects_v2(Bucket=REAL_BUCKET)
+    keys = []
+    for obj in resp['Contents']:
+        keys.append(obj['Key'])
+    logger.info(f"Key total: {len(keys)}")
+    s3_resource = boto3.resource('s3')
+    for key in keys:
+        copy_source = {
+            'Bucket': REAL_BUCKET,
+            'Key': key
+        }
+        logger.info(f"KEY: {key}")
+        bucket = s3_resource.Bucket(TEST_BUCKET)
+        bucket.copy(copy_source, key)
+    logger.info("finish temporary copy")
     # END TEMPORARY
 
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
@@ -181,6 +192,7 @@ def wait_for_processing(event, context):
 def enable_triggers(function_names):
     active_dbs = _describe_db_clusters('stop')
     if DB[stage] not in active_dbs:
+        logger.info("DB is not active, skip enable of triggers")
         return
     my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
     return_value = False
@@ -188,12 +200,14 @@ def enable_triggers(function_names):
         response = my_lambda.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
             response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-            print(response)
+            logger.info(f"before enabling trigger {response}")
             if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
                 my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
                 response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
                 logger.info(f"Trigger should be enabled.  function name: {function_name} item: {response}")
                 return_value = True
+            else:
+                logger.info(f"Trigger was in invalid state so we didnt enable {response}")
     return return_value
 
 
