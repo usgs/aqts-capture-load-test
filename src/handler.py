@@ -302,14 +302,16 @@ def add_trigger_to_bucket(event, context):
     _remove_trigger(REAL_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(TEST_BUCKET)
-    enable_triggers(CAPTURE_TRIGGER, DB["LOAD"])
+    trigger_enabled = enable_triggers(CAPTURE_TRIGGER, DB["LOAD"])
+    logger.info(f"Was the trigger enabled on {CAPTURE_TRIGGER} for {DB['LOAD']}?  {trigger_enabled}")
 
 
 def remove_trigger_from_bucket(event, context):
     _remove_trigger(TEST_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(REAL_BUCKET)
-    enable_triggers(CAPTURE_TRIGGER, DB[stage])
+    trigger_enabled = enable_triggers(CAPTURE_TRIGGER, DB[stage])
+    logger.info(f"Was the trigger enabled on {CAPTURE_TRIGGER} for {DB[stage]}?  {trigger_enabled}")
 
 
 def run_integration_tests(event, context):
