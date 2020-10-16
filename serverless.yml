@@ -17,7 +17,6 @@ provider:
     "wma:taggingVersion": 0.0.1
     "wma:costCenter": TBD
     "wma:organization": IOW
-    "displayName": "Load Test"
     commitIdentifier: ${git:sha1}
 
 custom:
@@ -143,26 +142,6 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      LOG_LEVEL: INFO
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-  enableTestTrigger:
-    handler: src.handler.enable_test_trigger
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      LOG_LEVEL: INFO
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
-
-  enableRealTrigger:
-    handler: src.handler.enable_real_trigger
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -175,14 +154,6 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  waitForProcessing:
-    handler: src.handler.wait_for_processing
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      LOG_LEVEL: INFO
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
 
 #resources:
 #  Resources:
@@ -257,20 +228,16 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
+            Next: EnableTrigger
+          EnableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enableTrigger, Arn]
             Next: AddTriggerToTestBucket
           AddTriggerToTestBucket:
             Type: Task
             Resource:
               Fn::GetAtt: [addTriggerToBucket, Arn]
-            Next: WaitForTriggerAdd
-          WaitForTriggerAdd:
-            Type: Wait
-            Seconds: 120
-            Next: EnableTestTrigger
-          EnableTestTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [enableTestTrigger, Arn]
 #            Next: PreTest
 #          PreTest:
 #            Type: Task
@@ -289,15 +256,8 @@ stepFunctions:
 #              Fn::GetAtt: [copyS3, Arn]
 #            Next: WaitForProcessing
 #          WaitForProcessing:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [waitForProcessing, Arn]
-#            Retry:
-#              - ErrorEquals:
-#                  - States.ALL
-#                IntervalSeconds: 600
-#                MaxAttempts: 10
-#                BackoffRate: 1
+#            Type: Wait
+#            Seconds: 600
 #            Next: RunIntegrationTests
 #          RunIntegrationTests:
 #            Type: Task
