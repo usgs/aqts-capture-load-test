@@ -128,25 +128,6 @@ def copy_s3(event, context):
     :return:
     """
 
-    # START TEMPORARY
-    logger.info("Start temporary copy")
-    resp = s3_client.list_objects_v2(Bucket=REAL_BUCKET)
-    keys = []
-    for obj in resp['Contents']:
-        keys.append(obj['Key'])
-    logger.info(f"Key total: {len(keys)}")
-    s3_resource = boto3.resource('s3')
-    for key in keys:
-        copy_source = {
-            'Bucket': REAL_BUCKET,
-            'Key': key
-        }
-        logger.info(f"KEY: {key}")
-        bucket = s3_resource.Bucket(SRC_BUCKET)
-        bucket.copy(copy_source, key)
-    logger.info("finish temporary copy")
-    # END TEMPORARY
-
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
@@ -190,24 +171,31 @@ def wait_for_processing(event, context):
         raise Exception(f"Database is still busy {response}")
 
 
-def enable_triggers(function_names, db_name):
+def _enable_trigger(function_name, db_name):
     active_dbs = _describe_db_clusters('stop')
     if db_name not in active_dbs:
         return f"DB {db_name} is not active, skip enable of triggers"
 
     my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
-    for function_name in function_names:
-        response = my_lambda.list_event_source_mappings(FunctionName=function_name)
-        for item in response['EventSourceMappings']:
+    event_source_mapping = my_lambda.list_event_source_mappings(FunctionName=function_name)
+    for item in event_source_mapping['EventSourceMappings']:
+        response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
+        logger.info(f"before enabling trigger {response}")
+        if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
+            my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
             response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-            logger.info(f"before enabling trigger {response}")
-            if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
-                my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-                response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-                return f"Trigger should be enabled.  function name: {function_name} item: {response}"
-            elif response['State'] in ('Enabled', 'Enabling'):
-                return f"Trigger was already enabled. function names {function_names}"
-    return f"Trigger not enabled, even though db {db_name} was active function_names {function_names}"
+            return f"Trigger should be enabled.  function name: {function_name} item: {response}"
+        elif response['State'] in ('Enabled', 'Enabling'):
+            return f"Trigger was already enabled. function name {function_name}"
+    return f"Trigger not enabled, even though db {db_name} was active function_names {function_name} event_source_mapping {event_source_mapping}"
+
+
+def enable_test_trigger(event, context):
+    _enable_trigger(CAPTURE_TRIGGER, DB["LOAD"])
+
+
+def enable_real_trigger(event, context):
+    _enable_trigger(CAPTURE_TRIGGER, DB[stage])
 
 
 def restore_db_cluster(event, context):
@@ -295,21 +283,15 @@ def add_trigger_to_bucket(event, context):
     :param context:
     :return:
     """
-    logger.info(f"REAL BUCKET {REAL_BUCKET}")
-    logger.info(f"TEST BUCKET {TEST_BUCKET}")
     _remove_trigger(REAL_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(TEST_BUCKET)
-    trigger_enabled = enable_triggers(CAPTURE_TRIGGER, DB["LOAD"])
-    logger.info(f"Was the trigger enabled on {CAPTURE_TRIGGER} for {DB['LOAD']}?  {trigger_enabled}")
 
 
 def remove_trigger_from_bucket(event, context):
     _remove_trigger(TEST_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(REAL_BUCKET)
-    trigger_enabled = enable_triggers(CAPTURE_TRIGGER, DB[stage])
-    logger.info(f"Was the trigger enabled on {CAPTURE_TRIGGER} for {DB[stage]}?  {trigger_enabled}")
 
 
 def run_integration_tests(event, context):

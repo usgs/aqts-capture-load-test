@@ -147,6 +147,25 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  enableTestTrigger:
+    handler: src.handler.enable_test_trigger
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+
+  enableRealTrigger:
+    handler: src.handler.enable_real_trigger
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   modifySchemaOwnerPassword:
     handler: src.handler.modify_schema_owner_password
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -238,16 +257,20 @@ stepFunctions:
                 IntervalSeconds: 900
                 MaxAttempts: 12
                 BackoffRate: 1
-#            Next: EnableTrigger
-#          EnableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [enableTrigger, Arn]
             Next: AddTriggerToTestBucket
           AddTriggerToTestBucket:
             Type: Task
             Resource:
               Fn::GetAtt: [addTriggerToBucket, Arn]
+            Next: WaitForTriggerAdd
+          WaitForTriggerAdd:
+            Type: Wait
+            Seconds: 120
+            Next: EnableTestTrigger
+          EnableTestTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enableTestTrigger, Arn]
 #            Next: PreTest
 #          PreTest:
 #            Type: Task
