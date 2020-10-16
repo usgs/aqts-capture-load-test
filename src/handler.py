@@ -142,7 +142,7 @@ def copy_s3(event, context):
             'Key': key
         }
         logger.info(f"KEY: {key}")
-        bucket = s3_resource.Bucket(TEST_BUCKET)
+        bucket = s3_resource.Bucket(SRC_BUCKET)
         bucket.copy(copy_source, key)
     logger.info("finish temporary copy")
     # END TEMPORARY
