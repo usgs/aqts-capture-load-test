@@ -125,6 +125,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -201,8 +202,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 300
+                MaxAttempts: 36
                 BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
@@ -212,8 +213,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 300
+                MaxAttempts: 36
                 BackoffRate: 1
             Next: ModifySchemaOwnerPassword
           ModifySchemaOwnerPassword:
@@ -223,8 +224,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 300
+                MaxAttempts: 36
                 BackoffRate: 1
             Next: AddNotificationToTestBucket
           AddNotificationToTestBucket:
@@ -252,46 +253,41 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [copyS3, Arn]
-#            Next: WaitForProcessing
-#          WaitForProcessing:
-#            Type: Wait
-#            Seconds: 600
-#            Next: RunIntegrationTests
-#          RunIntegrationTests:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [runIntegrationTests, Arn]
-#            Next: DeleteDbInstance
-#          DeleteDbInstance:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [ deleteDbInstance, Arn ]
-#            Retry:
-#              - ErrorEquals:
-#                  - States.ALL
-#                IntervalSeconds: 900
-#                MaxAttempts: 12
-#                BackoffRate: 1
-#            Next: DeleteDbCluster
-#          DeleteDbCluster:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [deleteDbCluster, Arn]
-#            Next: RemoveNotificationFromTestBucket
-#          RemoveNotificationFromTestBucket:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [removeNotificationFromTestBucket, Arn]
-#            Next: RestoreSecrets
-#          RestoreSecrets:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [restoreSecrets, Arn]
-#            Next: DisableTrigger
-#          DisableTrigger:
-#            Type: Task
-#            Resource:
-#              Fn::GetAtt: [disableTrigger, Arn]
+            Next: WaitForProcessing
+          WaitForProcessing:
+            Type: Wait
+            Seconds: 600
+            Next: RunIntegrationTests
+          RunIntegrationTests:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [runIntegrationTests, Arn]
+            Next: DeleteDbInstance
+          DeleteDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ deleteDbInstance, Arn ]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 36
+                BackoffRate: 1
+            Next: DeleteDbCluster
+          DeleteDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [deleteDbCluster, Arn]
+            Next: RemoveNotificationFromTestBucket
+          RemoveNotificationFromTestBucket:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [removeNotificationFromTestBucket, Arn]
+            Next: RestoreSecrets
+          RestoreSecrets:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [restoreSecrets, Arn]
             End: true
 
 plugins:

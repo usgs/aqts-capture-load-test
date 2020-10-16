@@ -61,6 +61,7 @@ DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
 CAPTURE_TRIGGER = f"aqts-capture-trigger-queue-{stage}"
+ERROR_QUEUE = f"aqts-capture-error-queue-{stage}"
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
 rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -188,6 +189,7 @@ def disable_trigger(event, context):
         lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
     return True
 
+
 def enable_trigger(event, context):
     """
     Enable the trigger on the bucket (after test, restoring things to normal)
@@ -243,7 +245,13 @@ def add_notification_to_test_bucket(event, context):
             ]
         }
     )
-    logger.info(f"response adding trigger {response}")
+    response = real_bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+            ]
+        }
+    )
+
     bucket_notification.load()
     logger.info(
         f"right after add notification, notifications on test bucket {bucket_notification.queue_configurations}")
@@ -258,6 +266,19 @@ def remove_notification_from_bucket(event, context):
     :param context:
     :return:
     """
+    my_queue_url = ""
+    response = sqs_client.list_queues()
+    for url in response['QueueUrls']:
+        if CAPTURE_TRIGGER in url:
+            logger.info(f"found url {url}")
+            my_queue_url = url
+            break
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url,
+        AttributeNames=['QueueArn']
+    )
+    my_queue_arn = response['Attributes']['QueueArn']
+
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
     real_bucket_notification = s3.BucketNotification(REAL_BUCKET)
     bucket_notification.load()
@@ -268,11 +289,23 @@ def remove_notification_from_bucket(event, context):
             ]
         }
     )
+    response = real_bucket_notification.put(
+        NotificationConfiguration={
+            'QueueConfigurations': [
+                {
+                    'QueueArn': my_queue_arn,
+                    'Events': [
+                        's3:ObjectCreated:*'
+                    ]
+                }
+            ]
+        }
+    )
     bucket_notification.load()
 
     logger.info(f"right after remove notification on test bucket, queues {bucket_notification.queue_configurations}")
     logger.info(
-        f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
+    f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
 
 
 def run_integration_tests(event, context):
@@ -285,6 +318,32 @@ def run_integration_tests(event, context):
     :param context:
     :return:
     """
+
+    # TEMP
+    my_queue_url = ""
+    response = sqs_client.list_queues()
+    for url in response['QueueUrls']:
+        if CAPTURE_TRIGGER in url:
+            logger.info(f"found url {url}")
+            my_queue_url = url
+            break
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url,
+        AttributeNames=['QueueArn']
+    )
+    logger.info(f"capture queue attributes: {response}")
+
+    for url in response['QueueUrls']:
+        if ERROR_QUEUE in url:
+            logger.info(f"found url {url}")
+            my_queue_url = url
+            break
+    response = sqs_client.get_queue_attributes(
+        QueueUrl=my_queue_url,
+        AttributeNames=['QueueArn']
+    )
+    logger.info(f"capture queue attributes: {response}")
+    # END TEMP
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_LOAD,
     )
@@ -375,7 +434,13 @@ def modify_schema_owner_password(event, context):
     db_name = secret_string['DATABASE_NAME']
     rds = RDS(db_host, 'postgres', db_name, 'Password123')
     sql = "alter user capture_owner with password 'Password123'"
-    result = rds.alter_permissions(sql)
+    rds.alter_permissions(sql)
+
+    sqs = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
+    queue_info = sqs.get_queue_url(QueueName=CAPTURE_TRIGGER)
+    sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
+    queue_info = sqs.get_queue_url(QueueName=ERROR_QUEUE)
+    sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
 
 
 def _replace_secrets(secret_id):
