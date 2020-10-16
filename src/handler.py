@@ -55,6 +55,7 @@ DB_INSTANCE_CLASS = 'db.r5.8xlarge'
 ENGINE = 'aurora-postgresql'
 DEST_BUCKET = 'iow-retriever-capture-load'
 SRC_BUCKET = 'iow-retriever-capture-reference'
+REAL_BUCKET = f"iow-retriever-capture-{stage.lower()}"
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
@@ -206,15 +207,16 @@ def enable_trigger(event, context):
     return False
 
 
-def add_trigger_to_bucket(event, context):
+def add_notification_to_test_bucket(event, context):
     """
-    Attach the trigger to the load test bucket.
+    Attach the notification to the load test bucket.
     :param event:
     :param context:
     :return:
     """
 
     bucket_notification = s3.BucketNotification(DEST_BUCKET)
+    real_bucket_notification = s3.BucketNotification(REAL_BUCKET)
     logger.info(f"START {bucket_notification.get_available_subresources()}")
     my_queue_url = ""
     response = sqs_client.list_queues()
@@ -242,20 +244,23 @@ def add_trigger_to_bucket(event, context):
     )
     logger.info(f"response adding trigger {response}")
     bucket_notification.load()
-    logger.info(f"right after add trigger queues {bucket_notification.get_available_subresources()}")
+    logger.info(
+        f"right after add notification, notifications on test bucket {bucket_notification.queue_configurations}")
+    logger.info(
+        f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
 
 
-def remove_trigger_from_bucket(event, context):
+def remove_notification_from_bucket(event, context):
     """
-    Disconnect the trigger from the load test bucket.
+    Disconnect the notification from the load test bucket.
     :param event:
     :param context:
     :return:
     """
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
-    logger.info(f"START: {bucket_notification.get_available_subresources()}")
+    real_bucket_notification = s3.BucketNotification(REAL_BUCKET)
     bucket_notification.load()
-    logger.info(f"right before remove trigger queues {bucket_notification}")
+    logger.info(f"right before remove trigger queues {bucket_notification.queue_configurations}")
     response = bucket_notification.put(
         NotificationConfiguration={
             'QueueConfigurations': [
@@ -264,9 +269,9 @@ def remove_trigger_from_bucket(event, context):
     )
     bucket_notification.load()
 
-    logger.info(f"right after remove trigger queues {response}")
-
-    logger.info(f"right after remove trigger queues {bucket_notification.get_available_subresources()}")
+    logger.info(f"right after remove notification on test bucket, queues {bucket_notification.queue_configurations}")
+    logger.info(
+        f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
 
 
 def run_integration_tests(event, context):
