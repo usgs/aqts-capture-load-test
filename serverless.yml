@@ -289,6 +289,56 @@ stepFunctions:
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
             End: true
+    aqtsCreateCaptureDb:
+      loggingConfig:
+        level: ALL
+        includeExecutionData: true
+        destinations:
+          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
+      role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
+      name: aqts-capture-load-test-${self:provider.stage}
+      definition:
+        Comment: "AQTS CreateCaptureDb"
+        StartAt: RestoreDbCluster
+        States:
+          RestoreDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [restoreDbCluster, Arn]
+            Next: ModifyDbCluster
+          ModifyDbCluster:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [modifyDbCluster, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 36
+                BackoffRate: 1
+            Next: CreateDbInstance
+          CreateDbInstance:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [createDbInstance, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 36
+                BackoffRate: 1
+            Next: ModifySchemaOwnerPassword
+          ModifySchemaOwnerPassword:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [modifySchemaOwnerPassword, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 36
+                BackoffRate: 1
+            End: true
 
 plugins:
   - serverless-plugin-git-variables

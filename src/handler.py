@@ -203,9 +203,12 @@ def enable_trigger(event, context):
     if DB["LOAD"] in active_dbs:
         logger.info(f"DB {DB['LOAD']} Active, going to enable trigger")
         response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
+        logger.info(f"Response from enabling trigger {response}")
+        if len(response['EventSourceMappings']) == 0:
+            raise Exception(f"Event Source Mappings are empty {response}")
         for item in response['EventSourceMappings']:
             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-        return True
+            return True
     logger.info(f"DB {DB['LOAD']}Inactive, don't enable trigger")
     return False
 
@@ -219,7 +222,6 @@ def add_notification_to_test_bucket(event, context):
     """
 
     bucket_notification = s3.BucketNotification(DEST_BUCKET)
-    real_bucket_notification = s3.BucketNotification(REAL_BUCKET)
     logger.info(f"START {bucket_notification.get_available_subresources()}")
     my_queue_url = ""
     response = sqs_client.list_queues()
@@ -245,18 +247,10 @@ def add_notification_to_test_bucket(event, context):
             ]
         }
     )
-    response = real_bucket_notification.put(
-        NotificationConfiguration={
-            'QueueConfigurations': [
-            ]
-        }
-    )
 
     bucket_notification.load()
     logger.info(
         f"right after add notification, notifications on test bucket {bucket_notification.queue_configurations}")
-    logger.info(
-        f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
 
 
 def remove_notification_from_bucket(event, context):
@@ -266,46 +260,19 @@ def remove_notification_from_bucket(event, context):
     :param context:
     :return:
     """
-    my_queue_url = ""
-    response = sqs_client.list_queues()
-    for url in response['QueueUrls']:
-        if CAPTURE_TRIGGER in url:
-            logger.info(f"found url {url}")
-            my_queue_url = url
-            break
-    response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url,
-        AttributeNames=['QueueArn']
-    )
-    my_queue_arn = response['Attributes']['QueueArn']
 
     bucket_notification = s3.BucketNotification('iow-retriever-capture-load')
-    real_bucket_notification = s3.BucketNotification(REAL_BUCKET)
     bucket_notification.load()
     logger.info(f"right before remove trigger queues {bucket_notification.queue_configurations}")
-    response = bucket_notification.put(
+    bucket_notification.put(
         NotificationConfiguration={
             'QueueConfigurations': [
             ]
         }
     )
-    response = real_bucket_notification.put(
-        NotificationConfiguration={
-            'QueueConfigurations': [
-                {
-                    'QueueArn': my_queue_arn,
-                    'Events': [
-                        's3:ObjectCreated:*'
-                    ]
-                }
-            ]
-        }
-    )
-    bucket_notification.load()
 
+    bucket_notification.load()
     logger.info(f"right after remove notification on test bucket, queues {bucket_notification.queue_configurations}")
-    logger.info(
-    f"right after add notification, notifications on real bucket {real_bucket_notification.queue_configurations}")
 
 
 def run_integration_tests(event, context):
