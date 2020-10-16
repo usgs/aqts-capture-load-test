@@ -191,12 +191,13 @@ def _enable_trigger(function_name, db_name):
 
 
 def enable_test_trigger(event, context):
-    _enable_trigger(CAPTURE_TRIGGER, DB["LOAD"])
+    result = _enable_trigger(CAPTURE_TRIGGER, DB["LOAD"])
+    logger.info(result)
 
 
 def enable_real_trigger(event, context):
-    _enable_trigger(CAPTURE_TRIGGER, DB[stage])
-
+    result = _enable_trigger(CAPTURE_TRIGGER, DB[stage])
+    logger.info(result)
 
 def restore_db_cluster(event, context):
     """
