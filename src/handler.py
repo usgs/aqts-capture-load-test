@@ -23,6 +23,9 @@ DB = {
     "LOAD": 'nwcapture-load'
 }
 
+
+CAPTURE_TRIGGER = 'aqts-capture-trigger-QA-aqtsCaptureTrigger'
+
 """
 This is supposed to be all lambda functions invoked by the state machine.
 """
@@ -60,7 +63,7 @@ REAL_BUCKET = f"iow-retriever-capture-{stage.lower()}"
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
 NWCAPTURE_LOAD = 'NWCAPTURE-DB-LOAD'
-CAPTURE_TRIGGER = f"aqts-capture-trigger-queue-{stage}"
+CAPTURE_TRIGGER_QUEUE = f"aqts-capture-trigger-queue-{stage}"
 ERROR_QUEUE = f"aqts-capture-error-queue-{stage}"
 
 secrets_client = boto3.client('secretsmanager', os.environ['AWS_DEPLOYMENT_REGION'])
@@ -202,12 +205,6 @@ def enable_trigger(event, context):
             raise Exception(f"Event Source Mappings are empty for trigger queue {response}")
         for item in response['EventSourceMappings']:
             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-        response = lambda_client.list_event_source_mappings(FunctionName=ERROR_QUEUE)
-        logger.info(f"Response from listing event source mappings error queue {response}")
-        if len(response['EventSourceMappings']) == 0:
-            raise Exception(f"Event Source Mappings are empty for error queue {response}")
-        for item in response['EventSourceMappings']:
-            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
     else:
         raise Exception("nwcapture-load db was off")
 
@@ -226,7 +223,7 @@ def add_notification_to_test_bucket(event, context):
     my_queue_url = ""
     response = sqs_client.list_queues()
     for url in response['QueueUrls']:
-        if CAPTURE_TRIGGER in url:
+        if CAPTURE_TRIGGER_QUEUE in url:
             logger.info(f"found url {url}")
             my_queue_url = url
             break
@@ -385,7 +382,7 @@ def modify_schema_owner_password(event, context):
     rds.alter_permissions(sql)
 
     sqs = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
-    queue_info = sqs.get_queue_url(QueueName=CAPTURE_TRIGGER)
+    queue_info = sqs.get_queue_url(QueueName=CAPTURE_TRIGGER_QUEUE)
     sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
     queue_info = sqs.get_queue_url(QueueName=ERROR_QUEUE)
     sqs.purge_queue(QueueUrl=queue_info['QueueUrl'])
