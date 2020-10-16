@@ -183,20 +183,6 @@ def restore_db_cluster(event, context):
     )
 
 
-def disable_trigger(event, context):
-    logger.info(event)
-    """
-    Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
-    :param event:
-    :param context:
-    :return:
-    """
-    response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-    for item in response['EventSourceMappings']:
-        lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
-    return True
-
-
 def enable_trigger(event, context):
     logger.info(event)
     """
@@ -211,14 +197,19 @@ def enable_trigger(event, context):
     if DB["LOAD"] in active_dbs:
         logger.info(f"DB {DB['LOAD']} Active, going to enable trigger")
         response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
-        logger.info(f"Response from enabling trigger {response}")
+        logger.info(f"Response from listing event source mappings trigger queue {response}")
         if len(response['EventSourceMappings']) == 0:
-            raise Exception(f"Event Source Mappings are empty {response}")
+            raise Exception(f"Event Source Mappings are empty for trigger queue {response}")
         for item in response['EventSourceMappings']:
             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
-            return True
-    logger.info(f"DB {DB['LOAD']}Inactive, don't enable trigger")
-    return False
+        response = lambda_client.list_event_source_mappings(FunctionName=ERROR_QUEUE)
+        logger.info(f"Response from listing event source mappings error queue {response}")
+        if len(response['EventSourceMappings']) == 0:
+            raise Exception(f"Event Source Mappings are empty for error queue {response}")
+        for item in response['EventSourceMappings']:
+            lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
+    else:
+        raise Exception("nwcapture-load db was off")
 
 
 def add_notification_to_test_bucket(event, context):
