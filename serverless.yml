@@ -296,7 +296,7 @@ stepFunctions:
         destinations:
           - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
       role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
-      name: aqts-capture-load-test-${self:provider.stage}
+      name: aqts-capture-create-db-${self:provider.stage}
       definition:
         Comment: "AQTS CreateCaptureDb"
         StartAt: RestoreDbCluster
