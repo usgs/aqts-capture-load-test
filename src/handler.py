@@ -440,12 +440,13 @@ def _purge_queues(queue_names):
 
 
 def _enable_trigger(function_name, db_name):
-    active_dbs = _describe_db_clusters('stop')
-    if db_name not in active_dbs:
-        return f"DB {db_name} is not active, skip enable of triggers"
-
     my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
     event_source_mapping = my_lambda.list_event_source_mappings(FunctionName=function_name)
+
+    active_dbs = _describe_db_clusters('stop')
+    if db_name not in active_dbs:
+        return f"DB {db_name} is not active, skip enable of triggers event_source_mapping {event_source_mapping}"
+
     for item in event_source_mapping['EventSourceMappings']:
         response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
         logger.info(f"before enabling trigger {response}")
