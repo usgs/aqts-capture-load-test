@@ -187,23 +187,23 @@ def disable_trigger(event, context):
         lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=False)
     return True
 
-
 def enable_trigger(event, context):
     """
-    Enable the trigger on the real bucket (after test, restoring things to normal)
+    Enable the trigger on the bucket (after test, restoring things to normal)
     if the real db is on.
     :param event:
     :param context:
     :return:
     """
     active_dbs = _describe_db_clusters('stop')
-    if DB[stage] in active_dbs:
-        logger.info("DB Active, going to enable trigger")
+    logger.info(f"active_dbs {active_dbs}")
+    if DB["LOAD"] in active_dbs:
+        logger.info(f"DB {DB['LOAD']} Active, going to enable trigger")
         response = lambda_client.list_event_source_mappings(FunctionName=CAPTURE_TRIGGER)
         for item in response['EventSourceMappings']:
             lambda_client.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
         return True
-    logger.info("DB Inactive, don't enable trigger")
+    logger.info(f"DB {DB['LOAD']}Inactive, don't enable trigger")
     return False
 
 
