@@ -19,7 +19,8 @@ logger.setLevel(log_level)
 
 DB = {
     "TEST": 'nwcapture-test',
-    "QA": 'nwcapture-qa'
+    "QA": 'nwcapture-qa',
+    "LOAD": 'nwcapture-load'
 }
 
 """
