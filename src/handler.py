@@ -193,10 +193,9 @@ def wait_for_processing(event, context):
 def enable_triggers(function_names, db_name):
     active_dbs = _describe_db_clusters('stop')
     if db_name not in active_dbs:
-        logger.info("DB is not active, skip enable of triggers")
-        return
+        return f"DB {db_name} is not active, skip enable of triggers"
+
     my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
-    return_value = False
     for function_name in function_names:
         response = my_lambda.list_event_source_mappings(FunctionName=function_name)
         for item in response['EventSourceMappings']:
@@ -205,11 +204,8 @@ def enable_triggers(function_names, db_name):
             if response['State'] in ('Disabled', 'Disabling', 'Updating', 'Creating'):
                 my_lambda.update_event_source_mapping(UUID=item['UUID'], Enabled=True)
                 response = my_lambda.get_event_source_mapping(UUID=item['UUID'])
-                logger.info(f"Trigger should be enabled.  function name: {function_name} item: {response}")
-                return_value = True
-            else:
-                logger.info(f"Trigger was in invalid state so we didnt enable {response}")
-    return return_value
+                return f"Trigger should be enabled.  function name: {function_name} item: {response}"
+    return f"Trigger not enabled, even though db {db_name} was active function_name {function_name}"
 
 
 def restore_db_cluster(event, context):
