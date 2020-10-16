@@ -209,8 +209,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
@@ -220,8 +220,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: ModifySchemaOwnerPassword
           ModifySchemaOwnerPassword:
@@ -231,8 +231,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: AddNotificationToTestBucket
           AddNotificationToTestBucket:
@@ -277,8 +277,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: DeleteDbCluster
           DeleteDbCluster:
@@ -315,6 +315,7 @@ stepFunctions:
             Next: ModifyDbCluster
           ModifyDbCluster:
             Type: Task
+            InputPath: "$.db_config"
             Resource:
               Fn::GetAtt: [modifyDbCluster, Arn]
             Retry:
@@ -326,6 +327,7 @@ stepFunctions:
             Next: CreateDbInstance
           CreateDbInstance:
             Type: Task
+            InputPath: "$.db_config"
             Resource:
               Fn::GetAtt: [createDbInstance, Arn]
             Retry:
@@ -337,6 +339,7 @@ stepFunctions:
             Next: ModifySchemaOwnerPassword
           ModifySchemaOwnerPassword:
             Type: Task
+            InputPath: "$.db_config"
             Resource:
               Fn::GetAtt: [modifySchemaOwnerPassword, Arn]
             Retry:
