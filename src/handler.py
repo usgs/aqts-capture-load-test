@@ -18,7 +18,8 @@ logger.setLevel(log_level)
 
 DB = {
     "TEST": 'nwcapture-test',
-    "QA": 'nwcapture-qa'
+    "QA": 'nwcapture-qa',
+    "LOAD": 'nwcapture-load'
 }
 
 """
@@ -189,9 +190,9 @@ def wait_for_processing(event, context):
         raise Exception(f"Database is still busy {response}")
 
 
-def enable_triggers(function_names):
+def enable_triggers(function_names, db_name):
     active_dbs = _describe_db_clusters('stop')
-    if DB[stage] not in active_dbs:
+    if db_name not in active_dbs:
         logger.info("DB is not active, skip enable of triggers")
         return
     my_lambda = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
@@ -301,14 +302,14 @@ def add_trigger_to_bucket(event, context):
     _remove_trigger(REAL_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(TEST_BUCKET)
-    enable_triggers(CAPTURE_TRIGGER)
+    enable_triggers(CAPTURE_TRIGGER, DB["LOAD"])
 
 
 def remove_trigger_from_bucket(event, context):
     _remove_trigger(TEST_BUCKET)
     _purge_queues(QUEUES)
     _add_trigger(REAL_BUCKET)
-    enable_triggers(CAPTURE_TRIGGER)
+    enable_triggers(CAPTURE_TRIGGER, DB[stage])
 
 
 def run_integration_tests(event, context):
