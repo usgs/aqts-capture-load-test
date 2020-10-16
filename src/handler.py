@@ -72,6 +72,7 @@ s3 = boto3.resource('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 
 
 def delete_db_cluster(event, context):
+    logger.info(event)
     rds_client.delete_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         SkipFinalSnapshot=True
@@ -87,6 +88,7 @@ def modify_db_cluster(event, context):
     :param context:
     :return:
     """
+    logger.info(event)
     rds_client.modify_db_cluster(
         DBClusterIdentifier=DB_CLUSTER_IDENTIFIER,
         ApplyImmediately=True,
@@ -95,6 +97,7 @@ def modify_db_cluster(event, context):
 
 
 def delete_db_instance(event, context):
+    logger.info(event)
     rds_client.delete_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         SkipFinalSnapshot=True
@@ -102,6 +105,7 @@ def delete_db_instance(event, context):
 
 
 def create_db_instance(event, context):
+    logger.info(event)
     rds_client.create_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_IDENTIFIER,
         DBInstanceClass=DB_INSTANCE_CLASS,
@@ -111,6 +115,7 @@ def create_db_instance(event, context):
 
 
 def copy_s3(event, context):
+    logger.info(event)
     """
     Copy files from the 'reference' bucket to the trigger bucket to simulate
     a full run.
@@ -134,6 +139,7 @@ def copy_s3(event, context):
 
 
 def restore_db_cluster(event, context):
+    logger.info(event)
     """
     By default we try to restore the production snapshot that
     is two days old.  If a specific snapshot needs to be used
@@ -178,6 +184,7 @@ def restore_db_cluster(event, context):
 
 
 def disable_trigger(event, context):
+    logger.info(event)
     """
     Disable the trigger on the real bucket (disrupting test tier while load test is in progress).
     :param event:
@@ -191,6 +198,7 @@ def disable_trigger(event, context):
 
 
 def enable_trigger(event, context):
+    logger.info(event)
     """
     Enable the trigger on the bucket (after test, restoring things to normal)
     if the real db is on.
@@ -214,6 +222,7 @@ def enable_trigger(event, context):
 
 
 def add_notification_to_test_bucket(event, context):
+    logger.info(event)
     """
     Attach the notification to the load test bucket.
     :param event:
@@ -254,6 +263,7 @@ def add_notification_to_test_bucket(event, context):
 
 
 def remove_notification_from_bucket(event, context):
+    logger.info(event)
     """
     Disconnect the notification from the load test bucket.
     :param event:
@@ -276,6 +286,7 @@ def remove_notification_from_bucket(event, context):
 
 
 def run_integration_tests(event, context):
+    logger.info(event)
     """
     Integration tests will go here.  Right now the idea is that the pre-test
     will save a TEST_RESULT object up in the bucket and that the integration tests will
@@ -286,31 +297,6 @@ def run_integration_tests(event, context):
     :return:
     """
 
-    # TEMP
-    my_queue_url = ""
-    response = sqs_client.list_queues()
-    for url in response['QueueUrls']:
-        if CAPTURE_TRIGGER in url:
-            logger.info(f"found url {url}")
-            my_queue_url = url
-            break
-    response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url,
-        AttributeNames=['QueueArn']
-    )
-    logger.info(f"capture queue attributes: {response}")
-
-    for url in response['QueueUrls']:
-        if ERROR_QUEUE in url:
-            logger.info(f"found url {url}")
-            my_queue_url = url
-            break
-    response = sqs_client.get_queue_attributes(
-        QueueUrl=my_queue_url,
-        AttributeNames=['QueueArn']
-    )
-    logger.info(f"capture queue attributes: {response}")
-    # END TEMP
     original = secrets_client.get_secret_value(
         SecretId=NWCAPTURE_LOAD,
     )
@@ -337,6 +323,7 @@ def run_integration_tests(event, context):
 
 
 def pre_test(event, context):
+    logger.info(event)
     """
     This is a place holder that will inspect the beginning state of the load test db
     and save some data so that it can be compared with the db after the integration tests run
@@ -365,6 +352,7 @@ def pre_test(event, context):
 
 
 def falsify_secrets(event, context):
+    logger.info(event)
     """
     1. call lambda_client.get_function_configuration() to get original env variables
     2. call secrets_client.get_secret_value() to get the secrets we want to change
@@ -381,10 +369,12 @@ def falsify_secrets(event, context):
 
 
 def restore_secrets(event, context):
+    logger.info(event)
     _replace_secrets(NWCAPTURE_REAL)
 
 
 def modify_schema_owner_password(event, context):
+    logger.info(event)
     """
     We don't know the password for 'capture_owner' on the production db,
     but we have already changed the postgres password in the modifyDbCluster step.
