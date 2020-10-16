@@ -310,12 +310,14 @@ stepFunctions:
         States:
           RestoreDbCluster:
             Type: Task
+            ResultPath: "$.lambda_result_restore_db_cluster"
             Resource:
               Fn::GetAtt: [restoreDbCluster, Arn]
             Next: ModifyDbCluster
           ModifyDbCluster:
             Type: Task
             InputPath: "$.db_config"
+            ResultPath: "$.lambda_result_modify_db_cluster"
             Resource:
               Fn::GetAtt: [modifyDbCluster, Arn]
             Retry:
@@ -328,6 +330,7 @@ stepFunctions:
           CreateDbInstance:
             Type: Task
             InputPath: "$.db_config"
+            ResultPath: "$.lambda_result_create_db_instance"
             Resource:
               Fn::GetAtt: [createDbInstance, Arn]
             Retry:
@@ -340,6 +343,7 @@ stepFunctions:
           ModifySchemaOwnerPassword:
             Type: Task
             InputPath: "$.db_config"
+            ResultPath: "$.lambda_result_modify_schema_owner_password"
             Resource:
               Fn::GetAtt: [modifySchemaOwnerPassword, Arn]
             Retry:
