@@ -90,8 +90,8 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  disableTrigger:
-    handler: src.handler.disable_trigger
+  enableTrigger:
+    handler: src.handler.enable_trigger
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -99,8 +99,8 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  enableTrigger:
-    handler: src.handler.enable_trigger
+  disableTrigger:
+    handler: src.handler.disable_trigger_if_real_db_is_off
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -118,7 +118,7 @@ functions:
     vpc: ${self:custom.vpc}
 
   removeNotificationFromTestBucket:
-    handler: src.handler.remove_notification_from_bucket
+    handler: src.handler.remove_notification_from_test_bucket
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -295,63 +295,11 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
-            End: true
-    aqtsCreateCaptureDb:
-      loggingConfig:
-        level: ALL
-        includeExecutionData: true
-        destinations:
-          - arn:aws:logs:${self:provider.region}:#{AWS::AccountId}:log-group:step-functions-test:*
-      role: arn:aws:iam::${self:custom.accountNumber}:role/step-functions-service-access
-      name: aqts-capture-create-db-${self:provider.stage}
-      definition:
-        Comment: "AQTS CreateCaptureDb"
-        StartAt: RestoreDbCluster
-        States:
-          RestoreDbCluster:
+            Next: DisableTrigger
+          DisableTrigger:
             Type: Task
-            ResultPath: "$.lambda_result_restore_db_cluster"
             Resource:
-              Fn::GetAtt: [restoreDbCluster, Arn]
-            Next: ModifyDbCluster
-          ModifyDbCluster:
-            Type: Task
-            InputPath: "$.db_config"
-            ResultPath: "$.lambda_result_modify_db_cluster"
-            Resource:
-              Fn::GetAtt: [modifyDbCluster, Arn]
-            Retry:
-              - ErrorEquals:
-                  - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
-                BackoffRate: 1
-            Next: CreateDbInstance
-          CreateDbInstance:
-            Type: Task
-            InputPath: "$.db_config"
-            ResultPath: "$.lambda_result_create_db_instance"
-            Resource:
-              Fn::GetAtt: [createDbInstance, Arn]
-            Retry:
-              - ErrorEquals:
-                  - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
-                BackoffRate: 1
-            Next: ModifySchemaOwnerPassword
-          ModifySchemaOwnerPassword:
-            Type: Task
-            InputPath: "$.db_config"
-            ResultPath: "$.lambda_result_modify_schema_owner_password"
-            Resource:
-              Fn::GetAtt: [modifySchemaOwnerPassword, Arn]
-            Retry:
-              - ErrorEquals:
-                  - States.ALL
-                IntervalSeconds: 300
-                MaxAttempts: 36
-                BackoffRate: 1
+              Fn::GetAtt: [disableTrigger, Arn]
             End: true
 
 plugins:
