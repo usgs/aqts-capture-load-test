@@ -139,6 +139,7 @@ def copy_s3(event, context):
     :param context:
     :return:
     """
+    logger.info(f"about to copy from SRC_BUCKET {SRC_BUCKET} to TEST_BUCKET {TEST_BUCKET}")
     resp = s3_client.list_objects_v2(Bucket=SRC_BUCKET)
     keys = []
     for obj in resp['Contents']:
@@ -150,6 +151,7 @@ def copy_s3(event, context):
             'Bucket': SRC_BUCKET,
             'Key': key
         }
+        logger.info(f"key = {key}")
         bucket = s3_resource.Bucket(TEST_BUCKET)
         bucket.copy(copy_source, key)
 

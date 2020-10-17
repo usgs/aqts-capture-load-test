@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, 'TEST'}
   runtime: python3.8
   memorySize: 128
-  timeout: 60
+  timeout: 90
   logRetentionInDays: 90
   deploymentBucket:
     name: iow-cloud-applications
@@ -148,6 +148,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
