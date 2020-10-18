@@ -57,7 +57,8 @@ SNAPSHOT_IDENTIFIER = f"rds:nwcapture-prod-external-{two_days_ago.year}-{month}-
 DB Info
 """
 DB_INSTANCE_IDENTIFIER = 'nwcapture-load-instance1'
-DB_INSTANCE_CLASS = 'db.r5.8xlarge'
+# DB_INSTANCE_CLASS = 'db.r5.8xlarge'
+DB_INSTANCE_CLASS = 'db.r5.large'
 ENGINE = 'aurora-postgresql'
 DB_CLUSTER_IDENTIFIER = 'nwcapture-load'
 NWCAPTURE_REAL = f"NWCAPTURE-DB-{stage}"
