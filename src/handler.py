@@ -282,7 +282,7 @@ def wait_for_test_to_finish(event, context):
         StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=120)).timestamp(),
         EndTime=datetime.datetime.now().timestamp()
     )
-    for value in response['MetricDataResults']['Values']:
+    for value in response['MetricDataResults'][0]['Values']:
         if value > 0:
             raise Exception("db is still busy")
 
