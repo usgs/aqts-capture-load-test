@@ -280,7 +280,7 @@ stepFunctions:
                   - States.ALL
                 IntervalSeconds: 300
                 MaxAttempts: 50
-                BackOffRate: 1
+                BackoffRate: 1
             Next: RunIntegrationTests
           RunIntegrationTests:
             Type: Task
