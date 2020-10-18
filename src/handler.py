@@ -274,12 +274,12 @@ def wait_for_test_to_finish():
                                 "Value": DB_INSTANCE_IDENTIFIER
                             }]
                     },
-                    'Period': 600,
+                    'Period': 60,
                     'Stat': 'Maximum',
                 }
             }
         ],
-        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=600)).timestamp(),
+        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=120)).timestamp(),
         EndTime=datetime.datetime.now().timestamp()
     )
     return response
