@@ -84,6 +84,7 @@ rds_client = boto3.client('rds', os.environ['AWS_DEPLOYMENT_REGION'])
 lambda_client = boto3.client('lambda', os.getenv('AWS_DEPLOYMENT_REGION'))
 sqs_client = boto3.client('sqs', os.getenv('AWS_DEPLOYMENT_REGION'))
 s3_client = boto3.client('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
+cloudwatch_client = boto3.client('cloudwatch', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
 s3 = boto3.resource('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 
 
@@ -198,6 +199,13 @@ def restore_db_cluster(event, context):
         VpcSecurityGroupIds=[
             vpc_security_group_id
         ],
+        Tags=[
+            {
+                'Key': 'Name',
+                'Value': 'NWISWEB-CAPTURE-RDS-AURORA-LOAD-TEST'
+            },
+        ]
+
     )
 
 
@@ -251,6 +259,31 @@ def add_notification_to_test_bucket(event, context):
     logger.info(f"real bucket response {response}")
 
 
+def wait_for_test_to_finish():
+    response = cloudwatch_client.get_metric_data(
+        MetricDataQueries=[
+            {
+                'MetricStat': {
+                    'Metric': {
+                        'Namespace': 'AWS/RDS',
+                        'MetricName': 'CPUUtilization',
+                        'Dimensions': [
+                            {
+                                "Name": "DBInstanceIdentifier",
+                                "Value": DB_INSTANCE_IDENTIFIER
+                            }]
+                    },
+                    'Period': 600,
+                    'Stat': 'Maximum',
+                }
+            }
+        ],
+        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=600)).timestamp(),
+        EndTime=datetime.datetime.now().timestamp()
+    )
+    return response
+
+
 def remove_notification_from_test_bucket(event, context):
     logger.info(event)
     response = _remove_notification_from_bucket(TEST_BUCKET)
@@ -295,6 +328,14 @@ def run_integration_tests(event, context):
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
+    response = _get_cloudwatch_alarm_history('aqts-capture-trigger-QA-concurrency-alarm')
+    logger.info(f"cloudwatch alarm history for trigger concurrency {response}")
+
+    response = _get_cloudwatch_alarm_history('aqts-capture-trigger-QA-error-alarm')
+    logger.info(f"cloudwatch alarm history for trigger error {response}")
+
+    response = wait_for_test_to_finish()
+    logger.info(f"db stats {response}")
 
 def pre_test(event, context):
     logger.info(event)
@@ -464,4 +505,20 @@ def _add_notification_to_bucket(bucket_name):
         }
     )
     bucket_notification.load()
+    return response
+
+
+def _get_cloudwatch_alarm_history(alarm):
+    hour_ago = datetime.datetime.now() - datetime.timedelta(hours=1)
+
+    response = cloudwatch_client.describe_alarm_history(
+        AlarmName=alarm,
+        AlarmTypes=[
+            'MetricAlarm',
+        ],
+        HistoryItemType='StateUpdate',
+        StartDate=hour_ago,
+        EndDate=datetime.datetime.now(),
+        ScanBy='TimestampDescending'
+    )
     return response
