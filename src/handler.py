@@ -263,7 +263,7 @@ def wait_for_test_to_finish():
     response = cloudwatch_client.get_metric_data(
         MetricDataQueries=[
             {
-                'Id': 'LoadTestCPUUtilization',
+                'Id': 'loadTestCpuUtilization',
                 'MetricStat': {
                     'Metric': {
                         'Namespace': 'AWS/RDS',
