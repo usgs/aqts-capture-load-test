@@ -329,7 +329,7 @@ def run_integration_tests(event, context):
     content["End Time"] = str(datetime.datetime.now())
     content["End Count"] = result
 
-    start_date_time_obj = datetime.datetime.strptime(content["Start Time"], '%Y-%m-%d %H:%M:%S.%f')
+    start_date_time_obj = datetime.datetime.strptime(content["StartTime"], '%Y-%m-%d %H:%M:%S.%f')
 
     response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-trigger-{stage}-error-alarm")
     content = _update_results_for_alarm(response, content)
