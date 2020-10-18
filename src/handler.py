@@ -259,7 +259,7 @@ def add_notification_to_test_bucket(event, context):
     logger.info(f"real bucket response {response}")
 
 
-def wait_for_test_to_finish():
+def wait_for_test_to_finish(event, context):
     response = cloudwatch_client.get_metric_data(
         MetricDataQueries=[
             {
@@ -282,7 +282,9 @@ def wait_for_test_to_finish():
         StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=120)).timestamp(),
         EndTime=datetime.datetime.now().timestamp()
     )
-    return response
+    for value in response['MetricDataResults']['Values']:
+        if value > 0:
+            raise Exception("db is still busy")
 
 
 def remove_notification_from_test_bucket(event, context):
@@ -326,17 +328,44 @@ def run_integration_tests(event, context):
     logger.info(f"after json loads {content}")
     content["End Time"] = str(datetime.datetime.now())
     content["End Count"] = result
+
+    start_date_time_obj = datetime.datetime.strptime(content["Start Time"], '%Y-%m-%d %H:%M:%S.%f')
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-trigger-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-corrected-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-loader-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-description-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-error-handler-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-field-visit-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-field-visit-transform-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-raw-load-medium-{stage}-error-alarm")
+    content = _update_results_for_alarm(response, content)
+
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
-    response = _get_cloudwatch_alarm_history('aqts-capture-trigger-QA-concurrency-alarm')
-    logger.info(f"cloudwatch alarm history for trigger concurrency {response}")
-
-    response = _get_cloudwatch_alarm_history('aqts-capture-trigger-QA-error-alarm')
-    logger.info(f"cloudwatch alarm history for trigger error {response}")
-
-    response = wait_for_test_to_finish()
-    logger.info(f"db stats {response}")
+def _update_results_for_alarm(response, content):
+    for history_item in response['AlarmHistoryItems']:
+        history_summary = history_item['HistorySummary']
+        if "to ALARM" in history_summary:
+            content['aqts-capture-trigger-QA-error-alarm'] = 'FAIL'
+        else:
+            content['aqts-capture-trigger-QA-error-alarm'] = 'PASS'
+    return content
 
 def pre_test(event, context):
     logger.info(event)
@@ -509,16 +538,14 @@ def _add_notification_to_bucket(bucket_name):
     return response
 
 
-def _get_cloudwatch_alarm_history(alarm):
-    hour_ago = datetime.datetime.now() - datetime.timedelta(hours=1)
-
+def _get_cloudwatch_alarm_history(start_time, alarm):
     response = cloudwatch_client.describe_alarm_history(
         AlarmName=alarm,
         AlarmTypes=[
             'MetricAlarm',
         ],
         HistoryItemType='StateUpdate',
-        StartDate=hour_ago,
+        StartDate=start_time,
         EndDate=datetime.datetime.now(),
         ScanBy='TimestampDescending'
     )

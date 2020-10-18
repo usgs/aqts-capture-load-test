@@ -135,6 +135,15 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  waitForTestToFinish:
+    handler: src.handler.wait_for_test_to_finish
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
   preTest:
     handler: src.handler.pre_test
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
@@ -261,10 +270,17 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [copyS3, Arn]
-            Next: WaitForProcessing
-          WaitForProcessing:
-            Type: Wait
-            Seconds: 600
+            Next: WaitForTestToFinish
+          WaitForTestToFinish:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [waitForTestToFinish, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 50
+                BackOffRate: 1
             Next: RunIntegrationTests
           RunIntegrationTests:
             Type: Task
