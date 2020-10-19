@@ -365,19 +365,21 @@ def run_integration_tests(event, context):
     response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
     content = _update_results_for_alarm(response, content, alarm)
 
-    content["ElapsedTime"] = elapsed_time
+    content["ElapsedTimeInSeconds"] = elapsed_time
 
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
 
 def _update_results_for_alarm(response, content, alarm):
+    content[alarm] = 'PASS, no activity'
     for history_item in response['AlarmHistoryItems']:
         history_summary = history_item['HistorySummary']
         if "to ALARM" in history_summary:
-            content[alarm] = 'FAIL'
+            content[alarm] = f"FAIL -- {history_summary}"
+            break
         else:
-            content[alarm] = 'PASS'
+            content[alarm] = f"{content[alarm]}, {history_summary}"
     return content
 
 
