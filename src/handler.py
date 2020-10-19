@@ -87,6 +87,21 @@ s3_client = boto3.client('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 cloudwatch_client = boto3.client('cloudwatch', os.getenv('AWS_DEPLOYMENT_REGION', 'us-west-2'))
 s3 = boto3.resource('s3', os.getenv('AWS_DEPLOYMENT_REGION'))
 
+ALARMS = {
+    f"aqts-capture-dvstat-transform-{stage}-error-alarm",
+    f"aqts-capture-error-handler-{stage}-error-alarm",
+    f"aqts-capture-field-visit-transform-{stage}-error-alarm",
+    f"aqts-capture-field-visit-metadata-{stage}-error-alarm",
+    f"aqts-capture-raw-load-{stage}-error-alarm",
+    f"aqts-capture-raw-load-medium-{stage}-error-alarm",
+    f"aqts-capture-state-machine-{stage}-duration-alarm",
+    f"aqts-capture-trigger-{stage}-error-alarm",
+    f"aqts-capture-ts-corrected-{stage}-error-alarm",
+    f"aqts-capture-ts-description-{stage}-error-alarm",
+    f"aqts-capture-ts-field-visit-{stage}-error-alarm",
+    f"aqts-capture-ts-loader-{stage}-error-alarm"
+}
+
 
 def delete_db_cluster(event, context):
     logger.info(event)
@@ -204,8 +219,23 @@ def restore_db_cluster(event, context):
                 'Key': 'Name',
                 'Value': 'NWISWEB-CAPTURE-RDS-AURORA-LOAD-TEST'
             },
+            {
+                'Key': 'wma:organization',
+                'Value': 'IOW'
+            },
+            {
+                'Key': 'wma:role',
+                'Value': 'etl'
+            },
+            {
+                'Key': 'wma:system',
+                'Value': 'NWIS'
+            },
+            {
+                'Key': 'wma:subSystem',
+                'Value': 'NWISWeb - Capture'
+            }
         ]
-
     )
 
 
@@ -333,37 +363,9 @@ def run_integration_tests(event, context):
 
     elapsed_time = datetime.datetime.now().timestamp() - start_date_time_obj.timestamp()
 
-    alarm = f"aqts-capture-trigger-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-ts-corrected-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-ts-loader-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-ts-description-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-error-handler-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-ts-field-visit-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-field-visit-transform-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
-
-    alarm = f"aqts-capture-raw-load-medium-{stage}-error-alarm"
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
-    content = _update_results_for_alarm(response, content, alarm)
+    for alarm in ALARMS:
+        response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+        content = _update_results_for_alarm(response, content, alarm)
 
     content["ElapsedTimeInSeconds"] = elapsed_time
 
