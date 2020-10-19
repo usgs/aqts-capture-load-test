@@ -281,6 +281,10 @@ stepFunctions:
                 IntervalSeconds: 300
                 MaxAttempts: 50
                 BackoffRate: 1
+            Next: WaitForAlarmsToUpdate
+          WaitForAlarmsToUpdate:
+            Type: Wait
+            Seconds: 300
             Next: RunIntegrationTests
           RunIntegrationTests:
             Type: Task
