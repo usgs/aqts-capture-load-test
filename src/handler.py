@@ -377,7 +377,7 @@ def _update_results_for_alarm(response, content, alarm):
     is_alarm = False
     history_list = []
     for item in response['AlarmHistoryItems']:
-        history_list.append(item)
+        history_list.append(item['HistorySummary'])
         if "to ALARM" in item['HistorySummary']:
             is_alarm = True
     if is_alarm is True:
