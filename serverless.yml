@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, 'TEST'}
   runtime: python3.8
   memorySize: 128
-  timeout: 60
+  timeout: 90
   logRetentionInDays: 90
   deploymentBucket:
     name: iow-cloud-applications
@@ -16,6 +16,10 @@ provider:
     "wma:environment": ${self:provider.stage}
     "wma:taggingVersion": 0.0.1
     "wma:costCenter": TBD
+    "wma:organization": IOW
+    "wma:role": etl
+    "wma:system": NWIS
+    "wma:subSystem": NWISWeb-Capture
     commitIdentifier: ${git:sha1}
 
 custom:
@@ -31,6 +35,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -39,6 +44,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -47,6 +53,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -55,6 +62,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -63,6 +71,7 @@ functions:
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -84,35 +93,39 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  disableTrigger:
-    handler: src.handler.disable_trigger
-    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
-    environment:
-      AWS_DEPLOYMENT_REGION: ${self:provider.region}
-      MAX_RETRIES: 6
-    vpc: ${self:custom.vpc}
-
   enableTrigger:
     handler: src.handler.enable_trigger
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  addTriggerToBucket:
-    handler: src.handler.add_trigger_to_bucket
+  disableTrigger:
+    handler: src.handler.disable_trigger_if_real_db_is_off
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  removeTriggerFromBucket:
-    handler: src.handler.remove_trigger_from_bucket
+  addNotificationToTestBucket:
+    handler: src.handler.add_notification_to_test_bucket
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
+
+  removeNotificationFromTestBucket:
+    handler: src.handler.remove_notification_from_test_bucket
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -125,8 +138,8 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
-  preTest:
-    handler: src.handler.pre_test
+  waitForTestToFinish:
+    handler: src.handler.wait_for_test_to_finish
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
@@ -134,12 +147,20 @@ functions:
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
+  preTest:
+    handler: src.handler.pre_test
+    role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
+    environment:
+      AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      MAX_RETRIES: 6
+    vpc: ${self:custom.vpc}
 
   copyS3:
     handler: src.handler.copy_s3
     role: arn:aws:iam::${self:custom.accountNumber}:role/csr-Lambda-Role
     environment:
       AWS_DEPLOYMENT_REGION: ${self:provider.region}
+      LOG_LEVEL: INFO
       MAX_RETRIES: 6
     vpc: ${self:custom.vpc}
 
@@ -153,21 +174,21 @@ functions:
     vpc: ${self:custom.vpc}
 
 
-resources:
-  Resources:
-    ReferenceFileBucket:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-reference
-    S3BucketLoadTest:
-      Type: AWS::S3::Bucket
-      Properties:
-        BucketName: iow-retriever-capture-load
-        AccessControl: Private
-        LifecycleConfiguration:
-          Rules:
-            - ExpirationInDays: 4
-              Status: Enabled
+#resources:
+#  Resources:
+#    ReferenceFileBucket:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-reference
+#    S3BucketLoadTest:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: iow-retriever-capture-load
+#        AccessControl: Private
+#        LifecycleConfiguration:
+#          Rules:
+#            - ExpirationInDays: 4
+#              Status: Enabled
 
 
 stepFunctions:
@@ -182,13 +203,8 @@ stepFunctions:
       name: aqts-capture-load-test-${self:provider.stage}
       definition:
         Comment: "AQTS Load Test"
-        StartAt: DisableTrigger
+        StartAt: FalsifySecrets
         States:
-          DisableTrigger:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [disableTrigger, Arn]
-            Next: FalsifySecrets
           FalsifySecrets:
             Type: Task
             Resource:
@@ -206,8 +222,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: CreateDbInstance
           CreateDbInstance:
@@ -217,8 +233,8 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: ModifySchemaOwnerPassword
           ModifySchemaOwnerPassword:
@@ -228,14 +244,19 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
-            Next: AddTriggerToTestBucket
-          AddTriggerToTestBucket:
+            Next: AddNotificationToTestBucket
+          AddNotificationToTestBucket:
             Type: Task
             Resource:
-              Fn::GetAtt: [addTriggerToBucket, Arn]
+              Fn::GetAtt: [addNotificationToTestBucket, Arn]
+            Next: EnableTrigger
+          EnableTrigger:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ enableTrigger, Arn ]
             Next: PreTest
           PreTest:
             Type: Task
@@ -244,7 +265,7 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 600
+                IntervalSeconds: 120
                 MaxAttempts: 10
                 BackoffRate: 1
             Next: CopyS3
@@ -252,10 +273,21 @@ stepFunctions:
             Type: Task
             Resource:
               Fn::GetAtt: [copyS3, Arn]
-            Next: WaitForProcessing
-          WaitForProcessing:
+            Next: WaitForTestToFinish
+          WaitForTestToFinish:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [waitForTestToFinish, Arn]
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                IntervalSeconds: 300
+                MaxAttempts: 50
+                BackoffRate: 1
+            Next: WaitForAlarmsToUpdate
+          WaitForAlarmsToUpdate:
             Type: Wait
-            Seconds: 600
+            Seconds: 300
             Next: RunIntegrationTests
           RunIntegrationTests:
             Type: Task
@@ -269,29 +301,29 @@ stepFunctions:
             Retry:
               - ErrorEquals:
                   - States.ALL
-                IntervalSeconds: 900
-                MaxAttempts: 12
+                IntervalSeconds: 600
+                MaxAttempts: 20
                 BackoffRate: 1
             Next: DeleteDbCluster
           DeleteDbCluster:
             Type: Task
             Resource:
               Fn::GetAtt: [deleteDbCluster, Arn]
-            Next: RemoveTriggerFromTestBucket
-          RemoveTriggerFromTestBucket:
+            Next: RemoveNotificationFromTestBucket
+          RemoveNotificationFromTestBucket:
             Type: Task
             Resource:
-              Fn::GetAtt: [removeTriggerFromBucket, Arn]
+              Fn::GetAtt: [removeNotificationFromTestBucket, Arn]
             Next: RestoreSecrets
           RestoreSecrets:
             Type: Task
             Resource:
               Fn::GetAtt: [restoreSecrets, Arn]
-            Next: EnableTrigger
-          EnableTrigger:
+            Next: DisableTrigger
+          DisableTrigger:
             Type: Task
             Resource:
-              Fn::GetAtt: [enableTrigger, Arn]
+              Fn::GetAtt: [disableTrigger, Arn]
             End: true
 
 plugins:
