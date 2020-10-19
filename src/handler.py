@@ -279,12 +279,12 @@ def wait_for_test_to_finish(event, context):
                 }
             }
         ],
-        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=120)).timestamp(),
+        StartTime=(datetime.datetime.now() - datetime.timedelta(seconds=300)).timestamp(),
         EndTime=datetime.datetime.now().timestamp()
     )
     for value in response['MetricDataResults'][0]['Values']:
         if value > 0:
-            raise Exception("db is still busy")
+            raise Exception(f"db is still busy at {datetime.datetime.now()}")
 
 
 def remove_notification_from_test_bucket(event, context):
@@ -372,14 +372,10 @@ def run_integration_tests(event, context):
 
 
 def _update_results_for_alarm(response, content, alarm):
-    content[alarm] = 'PASS'
-    for history_item in response['AlarmHistoryItems']:
-        history_summary = history_item['HistorySummary']
-        if "to ALARM" in history_summary:
-            content[alarm] = f"FAIL -- {history_summary}"
-            break
-        else:
-            content[alarm] = f"{content[alarm]}, {history_summary}"
+    if "to ALARM" in json.dumps(response):
+        content[alarm] = f"FAIL {response}"
+    else:
+        content[alarm] = f"PASS {response}"
     return content
 
 
