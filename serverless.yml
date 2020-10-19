@@ -17,6 +17,9 @@ provider:
     "wma:taggingVersion": 0.0.1
     "wma:costCenter": TBD
     "wma:organization": IOW
+    "wma:role": etl
+    "wma:system": NWIS
+    "wma:subSystem": NWISWeb-Capture
     commitIdentifier: ${git:sha1}
 
 custom:
