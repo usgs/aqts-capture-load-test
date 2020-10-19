@@ -331,41 +331,55 @@ def run_integration_tests(event, context):
 
     start_date_time_obj = datetime.datetime.strptime(content["StartTime"], '%Y-%m-%d %H:%M:%S.%f')
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-trigger-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    elapsed_time = datetime.datetime.now().timestamp() - start_date_time_obj.timestamp()
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-corrected-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-trigger-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-loader-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-ts-corrected-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-description-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-ts-loader-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-error-handler-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-ts-description-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-ts-field-visit-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-error-handler-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-field-visit-transform-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-ts-field-visit-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
 
-    response = _get_cloudwatch_alarm_history(start_date_time_obj, f"aqts-capture-raw-load-medium-{stage}-error-alarm")
-    content = _update_results_for_alarm(response, content)
+    alarm = f"aqts-capture-field-visit-transform-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
+
+    alarm = f"aqts-capture-raw-load-medium-{stage}-error-alarm"
+    response = _get_cloudwatch_alarm_history(start_date_time_obj, alarm)
+    content = _update_results_for_alarm(response, content, alarm)
+
+    content["ElapsedTime"] = elapsed_time
 
     logger.info(f"Writing this to S3 {json.dumps(content)}")
     s3.Object('iow-retriever-capture-load', 'TEST_RESULTS').put(Body=json.dumps(content))
 
-def _update_results_for_alarm(response, content):
+
+def _update_results_for_alarm(response, content, alarm):
     for history_item in response['AlarmHistoryItems']:
         history_summary = history_item['HistorySummary']
         if "to ALARM" in history_summary:
-            content['aqts-capture-trigger-QA-error-alarm'] = 'FAIL'
+            content[alarm] = 'FAIL'
         else:
-            content['aqts-capture-trigger-QA-error-alarm'] = 'PASS'
+            content[alarm] = 'PASS'
     return content
+
 
 def pre_test(event, context):
     logger.info(event)
