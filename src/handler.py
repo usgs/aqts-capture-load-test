@@ -372,10 +372,14 @@ def run_integration_tests(event, context):
 
 
 def _update_results_for_alarm(response, content, alarm):
-    if "to ALARM" in json.dumps(response):
-        content[alarm] = f"FAIL {response}"
+    is_alarm = False
+    for item in response['AlarmHistoryItems']:
+        if "to ALARM" in item['AlarmHistory']:
+            is_alarm = True
+    if is_alarm is True:
+        content[alarm] = f"FAIL {response['AlarmHistoryItems']}"
     else:
-        content[alarm] = f"PASS {response}"
+        content[alarm] = f"PASS: {response['AlarmHistoryItems']}"
     return content
 
 
