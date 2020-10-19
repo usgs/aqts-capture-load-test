@@ -372,7 +372,7 @@ def run_integration_tests(event, context):
 
 
 def _update_results_for_alarm(response, content, alarm):
-    content[alarm] = 'PASS, no activity'
+    content[alarm] = 'PASS'
     for history_item in response['AlarmHistoryItems']:
         history_summary = history_item['HistorySummary']
         if "to ALARM" in history_summary:
