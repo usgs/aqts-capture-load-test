@@ -374,7 +374,7 @@ def run_integration_tests(event, context):
 def _update_results_for_alarm(response, content, alarm):
     is_alarm = False
     for item in response['AlarmHistoryItems']:
-        if "to ALARM" in item['AlarmHistory']:
+        if "to ALARM" in item['HistorySummary']:
             is_alarm = True
     if is_alarm is True:
         content[alarm] = f"FAIL {response['AlarmHistoryItems']}"
