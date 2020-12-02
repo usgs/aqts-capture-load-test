@@ -23,6 +23,9 @@ provider:
     commitIdentifier: ${git:sha1}
 
 custom:
+  prune:
+    automatic: true
+    number: 3
   exportGitVariables: false
   accountNumber: ${ssm:/iow/aws/accountNumber}
   vpc:
@@ -331,6 +334,7 @@ plugins:
   - serverless-step-functions
   - serverless-python-requirements
   - serverless-pseudo-parameters
+  - serverless-prune-plugin
 
 package:
   exclude:
